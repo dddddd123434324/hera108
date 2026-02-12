@@ -348,6 +348,7 @@ public class TemporaryStatsPacket {
         for (Map.Entry<MapleBuffStat, Integer> statup : statups.entrySet()) {
             if (statup.getKey() == MapleBuffStat.MAGIC_SHIELD
                     || statup.getKey() == MapleBuffStat.SHADOWPARTNER
+                    || statup.getKey() == MapleBuffStat.MIRROR_IMAGE
                     || statup.getKey() == MapleBuffStat.MECH_CHANGE
                     || statup.getKey() == MapleBuffStat.DARK_AURA
                     || statup.getKey() == MapleBuffStat.YELLOW_AURA
@@ -430,6 +431,7 @@ public class TemporaryStatsPacket {
                 || stat == MapleBuffStat.WK_CHARGE
                 || stat == MapleBuffStat.LIGHTNING_CHARGE
                 || stat == MapleBuffStat.SHADOWPARTNER
+                || stat == MapleBuffStat.MIRROR_IMAGE
                 || stat == MapleBuffStat.DARKSIGHT
                 || stat == MapleBuffStat.SOULARROW
                 || stat == MapleBuffStat.MORPH
