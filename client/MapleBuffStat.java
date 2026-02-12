@@ -123,7 +123,6 @@ public enum MapleBuffStat implements Buffstat {
     //FREEZE(0x20000, 3, 137),
     LIGHTNING_CHARGE(0x40000, 3),
     ENRAGE(0x80000, 3),
-    MIRROR_IMAGE(0x80000, 3),
     OWL_SPIRIT(0x100000, 3),
     //0x200000 nNotDamaged
     FINAL_CUT(0x400000, 3),

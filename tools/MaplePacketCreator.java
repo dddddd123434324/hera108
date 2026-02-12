@@ -1000,15 +1000,13 @@ public class MaplePacketCreator {
          * 중독
          * 중독
          */
+        /*if (chr.getBuffedValue(MapleBuffStat.SHADOWPARTNER) != null) {//CTS_ShadowPartner
+         mask[mask.length - 1] |= MapleBuffStat.SHADOWPARTNER.getValue();
+         buffvalue.add(new Pair<Integer, Integer>(Integer.valueOf(chr.getBuffedValue(MapleBuffStat.SHADOWPARTNER).intValue()), 2));
+         buffvalue.add(new Pair<Integer, Integer>(Integer.valueOf(chr.getBuffSource(MapleBuffStat.SHADOWPARTNER)), 3));
+         }*/
         if (chr.getBuffedValue(MapleBuffStat.SHADOWPARTNER) != null) {//CTS_ShadowPartner 완료
             mask[mask.length - 1] |= MapleBuffStat.SHADOWPARTNER.getValue();
-            buffvalue.add(new Pair<Integer, Integer>(Integer.valueOf(chr.getBuffedValue(MapleBuffStat.SHADOWPARTNER).intValue()), 2));
-            buffvalue.add(new Pair<Integer, Integer>(Integer.valueOf(chr.getBuffSource(MapleBuffStat.SHADOWPARTNER)), 3));
-            if (chr.getBuffSource(MapleBuffStat.SHADOWPARTNER) == 4331002) {
-                mask[mask.length - MapleBuffStat.MIRROR_IMAGE.getPosition()] |= MapleBuffStat.MIRROR_IMAGE.getValue();
-                buffvalue.add(new Pair<Integer, Integer>(0, 2));
-                buffvalue.add(new Pair<Integer, Integer>(Integer.valueOf(chr.getBuffSource(MapleBuffStat.SHADOWPARTNER)), 3));
-            }
         }
         if (chr.getBuffedValue(MapleBuffStat.DARKSIGHT) != null || chr.isHidden()) {//CTS_DarkSight
             mask[mask.length - 1] |= MapleBuffStat.DARKSIGHT.getValue();

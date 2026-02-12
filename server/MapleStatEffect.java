@@ -492,9 +492,6 @@ public class MapleStatEffect implements Serializable {
                 case 4331002: // 미러이미징
                 case 14111000: // 쉐도우 파트너(나이트워커)
                     ret.statups.put(MapleBuffStat.SHADOWPARTNER, ret.x);
-                    if (sourceid == 4331002) {
-                        ret.statups.put(MapleBuffStat.MIRROR_IMAGE, 0);
-                    }
                     break;
                 case 4211008:
                     ret.statups.put(MapleBuffStat.SHADOWPARTNER, (int) ret.level);
@@ -2089,7 +2086,7 @@ public class MapleStatEffect implements Serializable {
             case 4331002: {
                 final EnumMap<MapleBuffStat, Integer> stat = new EnumMap<MapleBuffStat, Integer>(MapleBuffStat.class);
                 stat.put(MapleBuffStat.SHADOWPARTNER, x);
-                stat.put(MapleBuffStat.MIRROR_IMAGE, 0);
+                //stat.put(MapleBuffStat.MIRROR_IMAGE, 0);
                 applyto.getMap().broadcastMessage(applyto, TemporaryStatsPacket.giveForeignBuff(applyto.getId(), stat, this), false);
                 break;
             }
@@ -3310,7 +3307,6 @@ public class MapleStatEffect implements Serializable {
     public final boolean isShadow() {
         switch (sourceid) {
             case 4111002: // shadowpartner
-            case 4331002: // mirror imaging
             case 14111000: // 쉐도우 파트너(나이트워커)
             case 4211008:
                 return skill;
