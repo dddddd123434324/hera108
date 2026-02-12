@@ -3364,7 +3364,7 @@ public final class MapleMap {
                 mobRate = 1.8;
             } else if (getId() >= 240070100 && getId() <= 240070102) { //네오시티 스케치북 퀘스트지역 버프
                 mobRate = 2;
-            } else if (getId() >= 271000000 && getId() <= 271030600) { //파괴된 헤네시스, 에레브 지역 너프
+            } else if (getId() >= 271000000 && getId() <= 271030600) { //파괴된 헤네시스 및 에레브 지역 너프
                 mobRate = 0.5;
             } else if (getId() >= 803000101 && getId() <= 803000104) { //크림슨우드 산맥 동굴 지역 버프
                 mobRate = 1.8;

@@ -83,7 +83,7 @@ public class MapleMist extends MapleMapObject {
                 isSmMist = true;
                 isPoisonMist = 2;
                 break;
-            case 22161003: //Recovery Aura
+            case 22161003: //리커버리 오로라
                 if (owner.getParty() != null) {
                     party = owner.getParty().getId();
                 }

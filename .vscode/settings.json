@@ -1,0 +1,12 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "d:\\프메\\108헤라\\팩\\libs\\commons-dbcp-1.4.jar",
+        "d:\\프메\\108헤라\\팩\\libs\\commons-pool-1.6.jar",
+        "d:\\프메\\108헤라\\팩\\libs\\ini4j-0.5.4.jar",
+        "d:\\프메\\108헤라\\팩\\libs\\mail-1.4.7.jar",
+        "d:\\프메\\108헤라\\팩\\libs\\mysql-connector-java-5.1.42-bin.jar",
+        "d:\\프메\\108헤라\\팩\\libs\\rhino-1.7.7.1.jar",
+        "d:\\프메\\108헤라\\팩\\libs\\rhino-js-engine-1.7.7.1.jar"
+    ]
+}
