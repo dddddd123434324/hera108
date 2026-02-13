@@ -443,10 +443,16 @@ public class MobPacket {
             mplew.write(3);
         } else if (ms.getStati() == MonsterStatus.POISON || ms.getStati() == MonsterStatus.VENOM) { //stack ftw
             for (MonsterStatusEffect m : mse) {
-                if (m.getSkill() == 4220005) {
-                    PacketHelper.writeSingleMask(mplew, MonsterStatus.VENOM);
-                } else {
-                    PacketHelper.writeSingleMask(mplew, MonsterStatus.POISON);
+                switch (m.getSkill()) {
+                    case 4120005:
+                    case 4220005:
+                    case 4340001:
+                    case 14110004:
+                        PacketHelper.writeSingleMask(mplew, MonsterStatus.VENOM);
+                        break;
+                    default:
+                        PacketHelper.writeSingleMask(mplew, MonsterStatus.POISON);
+                        break;
                 }
                 mplew.writeShort(m.getX()); //dmg
                 if (m.isMonsterSkill()) {

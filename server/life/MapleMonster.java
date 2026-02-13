@@ -1081,21 +1081,15 @@ public class MapleMonster extends AbstractLoadedMapleLife {
             Item weapon_ = from.getInventory(MapleInventoryType.EQUIPPED).getItem((byte) -11);
             if (eff != null) {
                 if (stat == MonsterStatus.POISON) {
-                    final int dotRate = Math.max(1, eff.getDOT() + from.getStat().dot);
-                    final boolean mage = (from.getJob() >= 200 && from.getJob() <= 232)
-                            || (from.getJob() >= 1200 && from.getJob() <= 1212)
-                            || (from.getJob() >= 2200 && from.getJob() <= 2218)
-                            || (from.getJob() >= 3200 && from.getJob() <= 3212);
-                    double statBase = from.getStat().getCurrentMaxBaseDamage();
-                    if (mage) {
-                        statBase = Math.max(statBase, from.getStat().getCurrentMaxMagicDamage());
+                    final int poisonRate = eff.getSourceId() == 32120000
+                            ? Math.max(1, eff.getDamage())
+                            : Math.max(1, eff.getDOT() + from.getStat().dot);
+                    from.getStat().calculateMaxBaseDamage(from);
+                    double statBase = Math.max(1.0D, from.getStat().getCurrentMaxBaseDamage());
+                    if (statBase <= 1.0D) {
+                        statBase = Math.max(1.0D, ((4.0D * from.getStat().getTotalInt() + from.getStat().getTotalLuk()) * from.getStat().getTotalMagic()) * 0.01D);
                     }
-                    int baseDamage = Math.max(1, Math.max((int) Math.floor(statBase), status.getX() == null ? 0 : status.getX()));
-                    double poisonDamage = Math.max(1.0D, baseDamage * (dotRate / 100.0D));
-                    if (!stats.isBoss()) {
-                        poisonDamage = Math.min(poisonDamage, 30000.0D);
-                    }
-                    pDam = (int) Math.min(poisonDamage, (double) Integer.MAX_VALUE);
+                    pDam = (int) Math.min(Math.max(1.0D, statBase * (poisonRate / 100.0D)), (double) Integer.MAX_VALUE);
                 } else { //Venom
                     int v55 = from.getStat().getTotalStr() + from.getStat().getTotalLuk();
                     double v56 = v55 * 0.8;
@@ -1115,7 +1109,10 @@ public class MapleMonster extends AbstractLoadedMapleLife {
 //                System.out.println(" Venom Count : " + venomeff.getVenomCount() + " / Damage : " + venomeff.getX());
 //            }
             if (stat == MonsterStatus.POISON || (venomeff == null && stat == MonsterStatus.VENOM)) {
-                status.setValue(status.getStati(), Math.min(Short.MAX_VALUE, pDam));
+                // Client requires a positive poison value to render the poison effect.
+                // For oversized values, keep the effect with a minimal placeholder and show real damage via damageMonster packet.
+                final int displayDam = pDam > Short.MAX_VALUE ? 1 : Math.max(1, pDam);
+                status.setValue(status.getStati(), displayDam);
                 int dam = Integer.valueOf((int) pDam);
                 status.setPoisonSchedule(dam, from);
                 if (dam > 0) {
@@ -1123,6 +1120,9 @@ public class MapleMonster extends AbstractLoadedMapleLife {
                         dam = (int) (hp - 1);
                     }
                     damage(from, dam, false);
+                    if (pDam > Short.MAX_VALUE) {
+                        map.broadcastMessage(MobPacket.damageMonster(getObjectId(), dam), getTruePosition());
+                    }
                 }
                 if (stat == MonsterStatus.VENOM) {
                     status.setVenomCount(status.getVenomCount() + 1);
@@ -1269,6 +1269,9 @@ public class MapleMonster extends AbstractLoadedMapleLife {
     public final ArrayList<MonsterStatusEffect> getAllBuffs() {
         ArrayList<MonsterStatusEffect> ret = new ArrayList<>();
         for (MonsterStatusEffect e : stati.values()) {
+            if (e.getStati() == MonsterStatus.POISON || e.getStati() == MonsterStatus.VENOM) {
+                continue; // Poison/Venom are tracked in `poisons`; avoid duplicate processing.
+            }
             ret.add(e);
         }
         poisonsLock.readLock().lock();
@@ -1370,6 +1373,10 @@ public class MapleMonster extends AbstractLoadedMapleLife {
         }
         if (!cancel) {
             damage(chr, damage, false);
+            if ((status.getStati() == MonsterStatus.POISON || status.getStati() == MonsterStatus.VENOM)
+                    && status.getPoisonSchedule() > Short.MAX_VALUE) {
+                map.broadcastMessage(MobPacket.damageMonster(getObjectId(), damage), getTruePosition());
+            }
             if (shadowWeb) {
                 map.broadcastMessage(MobPacket.damageMonster(getObjectId(), damage), getTruePosition());
                 chr.checkMonsterAggro(this);

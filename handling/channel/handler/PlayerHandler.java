@@ -1441,6 +1441,7 @@ public class PlayerHandler {
         }
         //attack = DamageParse.Modify_AttackCrit(attack, chr, 2, effect);
         DamageParse.critModify(chr, attack);
+        DamageParse.applySnipingDisplayDamage(attack, chr);
         final Integer ShadowPartner = chr.getBuffedValue(MapleBuffStat.SHADOWPARTNER);
         if (ShadowPartner != null) {
             bulletCount *= 2;

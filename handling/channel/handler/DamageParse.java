@@ -62,6 +62,39 @@ public class DamageParse {
 
     private static byte masteryByte;
 
+    public static int getSnipingDamage(final MapleCharacter player) {
+        if (player == null) {
+            return 500000;
+        }
+        final PlayerStats stats = player.getStat();
+        stats.calculateMaxBaseDamage(player);
+        long fixed = (long) Math.floor(stats.getCurrentMaxBaseDamage() * 10.0D);
+        if (fixed <= 500000L) {
+            fixed = 500000L;
+        }
+        if (fixed > (long) Integer.MAX_VALUE) {
+            fixed = (long) Integer.MAX_VALUE;
+        }
+        return (int) fixed;
+    }
+
+    public static void applySnipingDisplayDamage(final AttackInfo attack, final MapleCharacter player) {
+        if (attack == null || player == null || attack.skill != 3221007 || attack.allDamage == null) {
+            return;
+        }
+        final int fixed = getSnipingDamage(player);
+        for (final AttackPair oned : attack.allDamage) {
+            if (oned == null || oned.attack == null) {
+                continue;
+            }
+            int overallAttackCount = 0;
+            for (final Pair<Integer, Boolean> eachde : oned.attack) {
+                overallAttackCount++;
+                eachde.left = overallAttackCount > 3 ? 0 : fixed;
+            }
+        }
+    }
+
     public static void applyAttack(final AttackInfo attack, final Skill theSkill, final MapleCharacter player, int attackCount, final double maxDamagePerMonster, final MapleStatEffect effect, final AttackType attack_type) {
         final MapleItemInformationProvider ii = MapleItemInformationProvider.getInstance();
         if (player == null) {
@@ -289,21 +322,8 @@ public class DamageParse {
                         return;
                     }
                     if (attack.skill == 3221007) { // 스나이핑 데미지
-                        stats.calculateMaxBaseDamage(player);
-
-                        long fixed = (long) Math.floor(stats.getCurrentMaxBaseDamage() * 10.0);
-
-                        if (fixed < 1L) {
-                            fixed = 1L;
-                        }
-                        if (fixed > (long) Integer.MAX_VALUE) {
-                            fixed = (long) Integer.MAX_VALUE;
-                        }
-
-                        eachd = (int) fixed; // 3타면 이 루프가 3번 돌며 매번 적용됨
-
-                        // 혹시 패킷이 3타 이상으로 오면 초과타는 무시(악용 방지)
-                        if (overallAttackCount > 3) {
+                        eachd = getSnipingDamage(player);
+                        if (overallAttackCount > 3) { // 혹시 패킷이 3타 이상으로 오면 초과타는 무시(악용 방지)
                             eachd = 0;
                         }
                     }

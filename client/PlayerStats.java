@@ -199,11 +199,7 @@ public class PlayerStats implements Serializable {
     }
 
     public final double getCurrentMaxBaseDamage() {
-        return localmaxbasedamage;
-    }
-
-    public final double getCurrentMaxMagicDamage() {
-        return localmaxmagicdamage;
+        return Math.max(localmaxbasedamage, localmaxmagicdamage);
     }
 
     public final double getCurrentMinBaseDamage() {
@@ -267,6 +263,7 @@ public class PlayerStats implements Serializable {
         combatOrders = 0;
         magic = 0;
         watk = 0;
+        localmaxmagicdamage = 0;
         if (chra.getJob() == 500 || (chra.getJob() >= 520 && chra.getJob() <= 522)) {
             watk = 20; //bullet
         } else if (chra.getJob() == 400 || (chra.getJob() >= 410 && chra.getJob() <= 412) || (chra.getJob() >= 1400 && chra.getJob() <= 1412)) {
@@ -1651,8 +1648,14 @@ public class PlayerStats implements Serializable {
     }
 
     public final void calculateMaxBaseDamage(MapleCharacter chra) {
-        if (watk <= 0) {
+        // Recompute from current stats every call to avoid using stale cached values.
+        localmaxbasedamage = 0;
+        localmaxmagicdamage = 0;
+        localmaxbasepvpdamage = 0;
+        localmaxbasepvpdamageL = 0;
+        if (watk <= 0 && magic <= 0) {
             localmaxbasedamage = 1;
+            localmaxmagicdamage = 1;
             localmaxbasepvpdamage = 1;
         } else {
             final Item weapon_item = chra.getInventory(MapleInventoryType.EQUIPPED).getItem((byte) -11);
@@ -1701,9 +1704,8 @@ public class PlayerStats implements Serializable {
                 localmaxbasedamage = weapon.getMaxDamageMultiplier() * (4 * mainstat + secondarystat) * ((watk - (mage ? we2.getMatk() : we2.getWatk())) / 100.0f);
                 localmaxbasedamage += weapon2.getMaxDamageMultiplier() * (4 * mainstat + secondarystat) * ((watk - (mage ? we1.getMatk() : we1.getWatk())) / 100.0f);
             } else if (mage) {
-                localmaxmagicdamage = (float) Math.ceil(weapon.getMaxDamageMultiplier() * (4 * mainstat + secondarystat) * (mage ? magic : watk) / 100.0f);
-                chra.dropMessage(5, "마력:" + magic + " 주스탯: " + mainstat + " 부스탯: " + secondarystat + " 무기상수:" + weapon.getMaxDamageMultiplier());
-                chra.dropMessage(5, "스공: " + (float) localmaxmagicdamage + " 크확: " + passive_sharpeye_rate);
+                localmaxmagicdamage = Math.max(1, (float) Math.ceil(weapon.getMaxDamageMultiplier() * (4 * mainstat + secondarystat) * (mage ? magic : watk) / 100.0f));
+                localmaxbasedamage = localmaxmagicdamage;
             } else {
                 //localmaxbasedamage = (float) Math.ceil(weapon.getMaxDamageMultiplier() * (4 * mainstat + secondarystat) * (mage ? magic : watk) / 100.0f);
                 localmaxbasedamage = ((0 + secondarystat + 4 * mainstat) * (watk * weapon.getMaxDamageMultiplier()) * 0.01 + 0.5);//ida기준
