@@ -202,6 +202,10 @@ public class PlayerStats implements Serializable {
         return localmaxbasedamage;
     }
 
+    public final double getCurrentMaxMagicDamage() {
+        return localmaxmagicdamage;
+    }
+
     public final double getCurrentMinBaseDamage() {
         return localminbasedamage;
     }

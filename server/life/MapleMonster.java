@@ -946,7 +946,7 @@ public class MapleMonster extends AbstractLoadedMapleLife {
     }
 
     public final void applyStatus(final MapleCharacter from, final MonsterStatusEffect status, final boolean poison, long duration, final boolean checkboss, final MapleStatEffect eff) {
-        if (!isAlive() || getLinkCID() > 0 || (getStats().isBoss() && status != null && status.getStati() != null && (status.getStati() == MonsterStatus.POISON || status.getStati() == MonsterStatus.NINJA_AMBUSH || status.getStati() == MonsterStatus.VENOM))) {
+        if (!isAlive() || getLinkCID() > 0 || (getStats().isBoss() && status != null && status.getStati() != null && status.getStati() == MonsterStatus.NINJA_AMBUSH)) {
             return;
         }
         if (isBuffed(MonsterStatus.POISON)) {
@@ -1077,56 +1077,25 @@ public class MapleMonster extends AbstractLoadedMapleLife {
         status.setCancelTask(aniTime);
 //        System.out.println("Cancel Time : " + aniTime);
         if (poison && getHp() > 1) {
-            float weak = 1.0F;
-            switch (stats.getEffectiveness(skilz.getElement())) {
-                case STRONG:
-                case IMMUNE:
-                    weak = 0.5F;
-                    break;
-                case WEAK:
-                    weak = 1.5F;
-                    break;
-            }
-            //y / 100
-            float nAmp = 1.0F;
-            if (from.getJob() / 10 == 21) {
-                if (from.getSkillLevel(2110001) > 0) {
-                    MapleStatEffect effz = SkillFactory.getSkill(2110001).getEffect(from.getSkillLevel(2110001));
-                    nAmp = effz.getY() / 100.0F;
-                }
-            }
-            if (from.getJob() / 10 == 22) {
-                if (from.getSkillLevel(2210001) > 0) {
-                    MapleStatEffect effz = SkillFactory.getSkill(2210001).getEffect(from.getSkillLevel(2210001));
-                    nAmp = effz.getY() / 100.0F;
-                }
-            }
             int pDam = 1;
             Item weapon_ = from.getInventory(MapleInventoryType.EQUIPPED).getItem((byte) -11);
             if (eff != null) {
                 if (stat == MonsterStatus.POISON) {
-                    final int dotRate = eff.getDOT() + from.getStat().dot;
-                    if (dotRate > 0) {
-                        int baseDamage = status.getX() == null ? 0 : status.getX();
-                        if (baseDamage <= 1) {
-                            baseDamage = (int) Math.min(Math.max(1.0D, (this.getStats().getHp() / (70 - from.getSkillLevel(eff.getSourceId())) + 0.999D) * weak * nAmp), 30000.0D);
-                            if (eff.getSourceId() == 5211004) {
-                                if (from.getTotalSkillLevel(5220001) > 0) {
-                                    MapleStatEffect eff1 = SkillFactory.getSkill(5220001).getEffect(from.getTotalSkillLevel(5220001));
-                                    baseDamage = (int) Math.min(30000, ((eff1.getX() / 100.0D) + 1.0D) * baseDamage);
-                                }
-                            }
-                        }
-                        pDam = (int) Math.min(Math.max(1.0D, baseDamage * (dotRate / 100.0D)), 30000.0D);
-                    } else {
-                        pDam = (int) Math.min(Math.max(1.0D, (this.getStats().getHp() / (70 - from.getSkillLevel(eff.getSourceId())) + 0.999D) * weak * nAmp), 30000.0D);
-                        if (eff.getSourceId() == 5211004) {
-                            if (from.getTotalSkillLevel(5220001) > 0) {
-                                MapleStatEffect eff1 = SkillFactory.getSkill(5220001).getEffect(from.getTotalSkillLevel(5220001));
-                                pDam = (int) Math.min(30000, ((eff1.getX() / 100.0D) + 1.0D) * pDam);
-                            }
-                        }
+                    final int dotRate = Math.max(1, eff.getDOT() + from.getStat().dot);
+                    final boolean mage = (from.getJob() >= 200 && from.getJob() <= 232)
+                            || (from.getJob() >= 1200 && from.getJob() <= 1212)
+                            || (from.getJob() >= 2200 && from.getJob() <= 2218)
+                            || (from.getJob() >= 3200 && from.getJob() <= 3212);
+                    double statBase = from.getStat().getCurrentMaxBaseDamage();
+                    if (mage) {
+                        statBase = Math.max(statBase, from.getStat().getCurrentMaxMagicDamage());
                     }
+                    int baseDamage = Math.max(1, Math.max((int) Math.floor(statBase), status.getX() == null ? 0 : status.getX()));
+                    double poisonDamage = Math.max(1.0D, baseDamage * (dotRate / 100.0D));
+                    if (!stats.isBoss()) {
+                        poisonDamage = Math.min(poisonDamage, 30000.0D);
+                    }
+                    pDam = (int) Math.min(poisonDamage, (double) Integer.MAX_VALUE);
                 } else { //Venom
                     int v55 = from.getStat().getTotalStr() + from.getStat().getTotalLuk();
                     double v56 = v55 * 0.8;
@@ -1146,7 +1115,7 @@ public class MapleMonster extends AbstractLoadedMapleLife {
 //                System.out.println(" Venom Count : " + venomeff.getVenomCount() + " / Damage : " + venomeff.getX());
 //            }
             if (stat == MonsterStatus.POISON || (venomeff == null && stat == MonsterStatus.VENOM)) {
-                status.setValue(status.getStati(), pDam);
+                status.setValue(status.getStati(), Math.min(Short.MAX_VALUE, pDam));
                 int dam = Integer.valueOf((int) pDam);
                 status.setPoisonSchedule(dam, from);
                 if (dam > 0) {
