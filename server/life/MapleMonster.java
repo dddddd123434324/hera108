@@ -1105,11 +1105,26 @@ public class MapleMonster extends AbstractLoadedMapleLife {
             Item weapon_ = from.getInventory(MapleInventoryType.EQUIPPED).getItem((byte) -11);
             if (eff != null) {
                 if (stat == MonsterStatus.POISON) {
-                    pDam = (int) Math.min(Math.max(1.0D, (this.getStats().getHp() / (70 - from.getSkillLevel(eff.getSourceId())) + 0.999D) * weak * nAmp), 30000.0D);
-                    if (eff.getSourceId() == 5211004) {
-                        if (from.getTotalSkillLevel(5220001) > 0) {
-                            MapleStatEffect eff1 = SkillFactory.getSkill(5220001).getEffect(from.getTotalSkillLevel(5220001));
-                            pDam = (int) Math.min(30000, ((eff1.getX() / 100.0D) + 1.0D) * pDam);
+                    final int dotRate = eff.getDOT() + from.getStat().dot;
+                    if (dotRate > 0) {
+                        int baseDamage = status.getX() == null ? 0 : status.getX();
+                        if (baseDamage <= 1) {
+                            baseDamage = (int) Math.min(Math.max(1.0D, (this.getStats().getHp() / (70 - from.getSkillLevel(eff.getSourceId())) + 0.999D) * weak * nAmp), 30000.0D);
+                            if (eff.getSourceId() == 5211004) {
+                                if (from.getTotalSkillLevel(5220001) > 0) {
+                                    MapleStatEffect eff1 = SkillFactory.getSkill(5220001).getEffect(from.getTotalSkillLevel(5220001));
+                                    baseDamage = (int) Math.min(30000, ((eff1.getX() / 100.0D) + 1.0D) * baseDamage);
+                                }
+                            }
+                        }
+                        pDam = (int) Math.min(Math.max(1.0D, baseDamage * (dotRate / 100.0D)), 30000.0D);
+                    } else {
+                        pDam = (int) Math.min(Math.max(1.0D, (this.getStats().getHp() / (70 - from.getSkillLevel(eff.getSourceId())) + 0.999D) * weak * nAmp), 30000.0D);
+                        if (eff.getSourceId() == 5211004) {
+                            if (from.getTotalSkillLevel(5220001) > 0) {
+                                MapleStatEffect eff1 = SkillFactory.getSkill(5220001).getEffect(from.getTotalSkillLevel(5220001));
+                                pDam = (int) Math.min(30000, ((eff1.getX() / 100.0D) + 1.0D) * pDam);
+                            }
                         }
                     }
                 } else { //Venom

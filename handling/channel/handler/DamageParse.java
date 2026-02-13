@@ -612,7 +612,8 @@ public class DamageParse {
                     if (effect != null && effect.getMonsterStati().size() > 0) {
                         if (effect.makeChanceResult()) {
                             for (Map.Entry<MonsterStatus, Integer> z : effect.getMonsterStati().entrySet()) {
-                                monster.applyStatus(player, new MonsterStatusEffect(z.getKey(), z.getValue(), theSkill.getId(), null, false), effect.isPoison(), effect.getDuration(), true, effect);
+                                final int statusValue = z.getKey() == MonsterStatus.POISON ? Math.max(1, totDamageToOneMonster) : z.getValue();
+                                monster.applyStatus(player, new MonsterStatusEffect(z.getKey(), statusValue, theSkill.getId(), null, false), effect.isPoison(), effect.getDuration(), true, effect);
                             }
                         }
                     }
@@ -891,7 +892,8 @@ public class DamageParse {
                     if (effect != null && effect.getMonsterStati().size() > 0) {
                         if (effect.makeChanceResult()) {
                             for (Map.Entry<MonsterStatus, Integer> z : effect.getMonsterStati().entrySet()) {
-                                monster.applyStatus(player, new MonsterStatusEffect(z.getKey(), z.getValue(), theSkill.getId(), null, false), effect.isPoison(), effect.getDuration(), true, effect);
+                                final int statusValue = z.getKey() == MonsterStatus.POISON ? Math.max(1, totDamageToOneMonster) : z.getValue();
+                                monster.applyStatus(player, new MonsterStatusEffect(z.getKey(), statusValue, theSkill.getId(), null, false), effect.isPoison(), effect.getDuration(), true, effect);
                             }
                         }
                     }

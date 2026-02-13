@@ -601,11 +601,12 @@ public final class MapleMap {
             if (de.itemId == 2439987) {
                 final int lvl = mob.getStats().getLevel();
 
-                double dyn = lvl * 10;
-                final double growth = 1.01;
-                dyn *= Math.pow(growth, lvl / 10.0);
+                final double A = 289.9390336;
+                final double g = 1.0156914791; // 레벨당 성장률
+
+                double dyn = A * Math.pow(g, lvl);
+
                 chance = (int) Math.max(0, Math.min(999999, Math.round(dyn)));
-                chance = Math.min(chance, 5000);
             }
 
             if (Randomizer.nextInt(999999) < (long) chance * sdroprate && (de.continent < 0 || (de.continent < 10 && mapid / 100000000 == de.continent) || (de.continent < 100 && mapid / 10000000 == de.continent) || (de.continent < 1000 && mapid / 1000000 == de.continent))) {
@@ -3364,8 +3365,14 @@ public final class MapleMap {
                 mobRate = 1.8;
             } else if (getId() >= 240070100 && getId() <= 240070102) { //네오시티 스케치북 퀘스트지역 버프
                 mobRate = 2;
-            } else if (getId() >= 271000000 && getId() <= 271030600) { //파괴된 헤네시스 및 에레브 지역 너프
+            } else if (getId() >= 271030101 && getId() <= 271030102) { // 연무장 너프
                 mobRate = 0.5;
+            } else if (getId() >= 271000000 && getId() <= 271030600) { // 파괴된 헤네시스 및 에레브 너프
+                mobRate = 0.8;
+            } else if (getId() >= 801000000 && getId() <= 801050000) { //쇼와 지역 너프
+                mobRate = 0.5;
+            } else if (getId() >= 211060000 && getId() <= 211060900) { //사자왕의 성 지역 버프
+                mobRate = 1.7;
             } else if (getId() >= 803000101 && getId() <= 803000104) { //크림슨우드 산맥 동굴 지역 버프
                 mobRate = 1.8;
             } else if (getId() >= 803000300 && getId() <= 803000310) { //크림슨우드 산맥 협곡 지역 버프
