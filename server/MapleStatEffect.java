@@ -2795,6 +2795,7 @@ public class MapleStatEffect implements Serializable {
             return true;
         }
         switch (sourceid) {
+            case 2311003: // Holy Symbol: self-only
             case 1211003:
             case 1211004:
             case 1211005:
