@@ -3844,6 +3844,27 @@ public class InventoryHandler {
                     chr.getClient().getSession().write(MaplePacketCreator.showGainNx(100, rand));
                     removeItem(chr, mapitem, ob);
                     c.getSession().write(MaplePacketCreator.enableActions());
+                } else if (mapitem.getItemId() == 2439986 || mapitem.getItemId() == 2439987
+                        || mapitem.getItemId() == 2439988 || mapitem.getItemId() == 2439989) {
+                    int amount = 0;
+                    switch (mapitem.getItemId()) {
+                        case 2439986:
+                            amount = 1000;
+                            break;
+                        case 2439987:
+                            amount = 5000;
+                            break;
+                        case 2439988:
+                            amount = 10000;
+                            break;
+                        case 2439989:
+                            amount = 50000;
+                            break;
+                    }
+                    chr.modifyCSPoints(3, amount, false);
+                    chr.getClient().getSession().write(MaplePacketCreator.showGainNx(amount, (byte) 1));
+                    removeItem(chr, mapitem, ob);
+                    c.getSession().write(MaplePacketCreator.enableActions());
                 } else if (mapitem.getItemId() / 10000 != 291 && MapleInventoryManipulator.checkSpace(c, mapitem.getItemId(), mapitem.getItem().getQuantity(), mapitem.getItem().getOwner())) {
                     if (mapitem.getItem().getQuantity() >= 50 && mapitem.getItemId() == 2340000) {
                         c.setMonitored(true); //hack check
@@ -4032,6 +4053,27 @@ public class InventoryHandler {
                     byte rand = (byte) Randomizer.rand(1, 5);
                     chr.modifyCSPoints(1, 100 * rand, false);
                     chr.getClient().getSession().write(MaplePacketCreator.showGainNx(100, rand));
+                    removeItem_Pet(chr, mapitem, petz);
+                    c.getSession().write(MaplePacketCreator.enableActions());
+                } else if (mapitem.getItemId() == 2439986 || mapitem.getItemId() == 2439987
+                        || mapitem.getItemId() == 2439988 || mapitem.getItemId() == 2439989) {
+                    int amount = 0;
+                    switch (mapitem.getItemId()) {
+                        case 2439986:
+                            amount = 1000;
+                            break;
+                        case 2439987:
+                            amount = 5000;
+                            break;
+                        case 2439988:
+                            amount = 10000;
+                            break;
+                        case 2439989:
+                            amount = 50000;
+                            break;
+                    }
+                    chr.modifyCSPoints(3, amount, false);
+                    chr.getClient().getSession().write(MaplePacketCreator.showGainNx(amount, (byte) 1));
                     removeItem_Pet(chr, mapitem, petz);
                     c.getSession().write(MaplePacketCreator.enableActions());
                 } else if (MapleItemInformationProvider.getInstance().isPickupBlocked(mapitem.getItemId()) || mapitem.getItemId() / 10000 == 291) {

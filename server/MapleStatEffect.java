@@ -488,11 +488,13 @@ public class MapleStatEffect implements Serializable {
                 case 4111001: // mesoup
                     ret.statups.put(MapleBuffStat.MESOUP, ret.x);
                     break;
-                case 4111002: // shadowpartner
                 case 4331002: // 미러이미징
-                case 14111000: // 쉐도우 파트너(나이트워커)
                     ret.statups.put(MapleBuffStat.SHADOWPARTNER, ret.x);
                     break;
+                case 14111000: // 쉐도우 파트너(나이트워커)
+                    ret.statups.put(MapleBuffStat.SHADOWPARTNER, (int) ret.level);
+                    break;
+                case 4111002: // shadowpartner
                 case 4211008:
                     ret.statups.put(MapleBuffStat.SHADOWPARTNER, (int) ret.level);
                     break;
