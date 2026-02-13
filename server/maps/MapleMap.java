@@ -601,7 +601,7 @@ public final class MapleMap {
             if (de.itemId == 2439987) {
                 final int lvl = mob.getStats().getLevel();
 
-                double dyn = lvl * 4.0;
+                double dyn = lvl * 10;
                 final double growth = 1.01;
                 dyn *= Math.pow(growth, lvl / 10.0);
                 chance = (int) Math.max(0, Math.min(999999, Math.round(dyn)));

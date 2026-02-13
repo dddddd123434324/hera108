@@ -164,12 +164,6 @@ public class FamilyHandler {
             c.getPlayer().dropMessage(1, "대상을 찾을 수 없습니다. 대상과 같은 지역에 있어야 합니다.");
         } else if (addChr.getSeniorId() != 0) {
             c.getPlayer().dropMessage(1, "대상은 이미 패밀리가 존재합니다.");
-        } else if (addChr.getLevel() >= c.getPlayer().getLevel()) {
-            c.getPlayer().dropMessage(1, "주니어가 될 대상은 자신보다 레벨이 낮아야 합니다.");
-        } else if (addChr.getLevel() < c.getPlayer().getLevel() - 100) {
-            c.getPlayer().dropMessage(1, "주니어와 될 대상과 레벨 차이는 100 미만이어야 합니다.");
-        } else if (addChr.getLevel() < 10) {
-            c.getPlayer().dropMessage(1, "10레벨 이상의 대상을 주니어로 등록할 수 있습니다.");
         } else if (c.getPlayer().getJunior1() > 0 && c.getPlayer().getJunior2() > 0) {
             c.getPlayer().dropMessage(1, "이미 두 명의 주니어가 등록되어 있습니다.");
         } else if (c.getPlayer().isGM() || !addChr.isGM()) {
@@ -280,7 +274,7 @@ public class FamilyHandler {
 
     public static final void AcceptFamily(LittleEndianAccessor slea, MapleClient c) {
         MapleCharacter inviter = c.getPlayer().getMap().getCharacterById(slea.readInt());
-        if (inviter != null && c.getPlayer().getSeniorId() == 0 && (c.getPlayer().isGM() || !inviter.isHidden()) && inviter.getLevel() - 100 <= c.getPlayer().getLevel() && inviter.getLevel() >= 10 && inviter.getName().equals(slea.readMapleAsciiString()) && inviter.getNoJuniors() < 2 /*&& inviter.getFamily().getGens() < 1000*/ && c.getPlayer().getLevel() >= 10) {
+        if (inviter != null && c.getPlayer().getSeniorId() == 0 && (c.getPlayer().isGM() || !inviter.isHidden()) && inviter.getName().equals(slea.readMapleAsciiString()) && inviter.getNoJuniors() < 2 /*&& inviter.getFamily().getGens() < 1000*/) {
             boolean accepted = slea.readByte() > 0;
             inviter.getClient().getSession().write(FamilyPacket.sendFamilyJoinResponse(accepted, c.getPlayer().getName()));
             if (accepted) {
