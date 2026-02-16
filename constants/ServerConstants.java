@@ -40,7 +40,7 @@ public class ServerConstants {
     public static boolean logTrade = true;
     public static boolean logItem = true;
 
-    public static final short MAPLE_VERSION = (short) 111;
+    public static final short MAPLE_VERSION = (short) 111; //클라이언트 버전 설정
     public static final byte MAPLE_CHECK = 1;
     public static final byte MAPLE_PATCH = 1;
     public static boolean Use_Fixed_IV = false; // true = disable sniffing, false = server can connect to itself

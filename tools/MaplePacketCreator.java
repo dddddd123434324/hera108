@@ -5936,6 +5936,22 @@ public class MaplePacketCreator {
         return mplew.getPacket();
     }
 
+    public static byte[] showGainACash(int amount, byte quantity) {
+        MaplePacketLittleEndianWriter mplew = new MaplePacketLittleEndianWriter();
+
+        mplew.writeOpcode(SendPacketOpcode.SHOW_ITEM_GAIN_INCHAT.getValue());
+        mplew.write(5);
+        mplew.write(0);
+        if (quantity == 1) {
+            mplew.writeMapleAsciiString("A캐시를 획득했습니다 " + "(+" + amount + ")");
+        } else if (quantity > 1) {
+            mplew.writeMapleAsciiString("A캐시를 획득했습니다 " + "(+" + amount + "(x" + quantity + "))");
+        }
+        mplew.writeInt(-1);
+
+        return mplew.getPacket();
+    }
+
     public static final byte[] showFlameEffect(final int cid) {//SHOW_FOREIGN_EFFECT
         MaplePacketLittleEndianWriter mplew = new MaplePacketLittleEndianWriter();
         //mplew.writeOpcode(SendPacketOpcode.SHOW_ITEM_GAIN_INCHAT.getValue());

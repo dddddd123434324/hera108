@@ -1117,7 +1117,7 @@ public class AdminCommand {
                     text.append("#b직업 : #k" + c.getPlayer().getJobName(rs.getInt("c.job")) + " #d #b직업코드 : #k" + rs.getInt("c.job") + "\r\n");
                     text.append("#b레벨 : #k" + rs.getInt("c.level") + " #b경험치 : #k" + rs.getInt("c.exp") + "\r\n");
                     text.append("#b헤어 : #k" + rs.getInt("c.hair") + " #b성형 : #k" + rs.getInt("c.face") + "\r\n\r\n");
-                    text.append("#b소지 중인 후원포인트 : #k" + rs.getInt("DonateCash") + "\r\n");
+                    text.append("#b소지 중인 A캐시 : #k" + rs.getInt("DonateCash") + "\r\n");
                     text.append("#b소지 중인 캐시 : #k" + rs.getInt("ACash") + "\r\n");
 
                     text.append("#b소지 중인 메소 : #k" + c.getPlayer().getBanJum((long) rs.getInt("c.meso")) + "\r\n\r\n");

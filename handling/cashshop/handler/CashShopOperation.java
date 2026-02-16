@@ -667,7 +667,7 @@ public class CashShopOperation {
 
         //System.out.println("itemSN:" + itemSN);
         if (donateShop) {
-            c.getPlayer().dropMessage(1, "후원상점 아이템들은 선물하실 수 없습니다. \r\n캐시교환을 이용해 주세요.");
+            c.getPlayer().dropMessage(1, "A캐시 상점 아이템들은 선물하실 수 없습니다. \r\n캐시교환을 이용해 주세요.");
             doCSPackets(c);
             return;
         }

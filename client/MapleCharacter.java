@@ -5740,7 +5740,7 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
             case 3:
                 if (donatecash + quantity < 0) {
                     if (show) {
-                        dropMessage(-1, "후원 캐시를 더 받을 수 없습니다. 캐시가 지급되지 않습니다.");
+                        dropMessage(-1, "A캐시를 더 받을 수 없습니다. 캐시가 지급되지 않습니다.");
                     }
                     return;
                 }
@@ -5751,7 +5751,7 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
                 break;
         }
         if (show && quantity != 0) {
-            client.getSession().write(MaplePacketCreator.onChatMessage((short) 6, (type == 1 ? "캐시를 " : type == 3 ? "후원 캐시를 " : "메이플포인트를 ") + (quantity > 0 ? "얻었습니다 (+" + quantity + ")" : "잃었습니다. (" + quantity + ")")));
+            client.getSession().write(MaplePacketCreator.onChatMessage((short) 6, (type == 1 ? "캐시를 " : type == 3 ? "A캐시를 " : "메이플포인트를 ") + (quantity > 0 ? "얻었습니다 (+" + quantity + ")" : "잃었습니다. (" + quantity + ")")));
             //client.getSession().write(MaplePacketCreator.showSpecialEffect(21));
         }
     }
