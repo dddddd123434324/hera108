@@ -444,7 +444,7 @@ public final class MapleMap {
         int mobpos = mob.getTruePosition().x,
                 xPosPlus = 12,
                 smesorate = RateManager.MESO,
-                sdroprate = RateManager.getTrueDropRate(),
+                sdroprate = RateManager.DROP,
                 scashrate = RateManager.CASH;
         if (mob.getStats().isExplosiveReward()) {
             xPosPlus = 18;
@@ -499,12 +499,6 @@ public final class MapleMap {
             drop_rate = true;
             drop_rate_value = chr.getBuffedValue(MapleBuffStat.DROP_RATE);
         }
-        final double showdownRate = 1.0D + (showdown / 100.0D);
-        final double dropRateBuff = drop_rate ? drop_rate_value / 100.0D : 1.0D;
-        final double potentialDropRate = 1.0D + (chr.getStat().incRewardProp / 100.0D);
-        final double baseDropMultiplier = Math.max(1.0D, sdroprate);
-        final double totalItemDropMultiplier = Math.max(baseDropMultiplier, sdroprate * showdownRate * dropRateBuff * potentialDropRate);
-        final double mesoDropMultiplier = Math.max(baseDropMultiplier, sdroprate * showdownRate * dropRateBuff);
 
         for (final MonsterDropEntry de : dropEntry) {
             if (de.itemId == mob.getStolen()) {
@@ -520,10 +514,20 @@ public final class MapleMap {
             } else {
                 MDrate = 1.0;
             }
-            final double multiplier = de.itemId == 0 ? mesoDropMultiplier : totalItemDropMultiplier;
-            long chance = Math.round(de.chance * multiplier);
+            double multiplier = 0.00;
+            multiplier = sdroprate;
+            if (showdown != 0) {
+                multiplier += showdown / 100;
+            }
+            if (drop_rate) {
+                multiplier += (drop_rate_value - 100) / 100;
+            }
+            int chance = (int) (de.chance * multiplier);
             if (de.itemId == 0) {
-                chance = Math.round(chance * MDrate);
+                chance *= MDrate;
+            }
+            if (drop_rate) {
+                multiplier += (drop_rate_value - 100) / 100;
             }
             if (Randomizer.rand(0, 999999) < chance) {
                 pos.x = mobpos + (nIdx % 2 == 0 ? (xPosPlus * nIdx) : -(xPosPlus * (nIdx - 1)));
@@ -580,7 +584,10 @@ public final class MapleMap {
 
             globalEntry.add(new MonsterGlobalDropEntry(4310004, 150000, -1, (byte) 0, 1, 1, 9271)); //아이스박스
 
+            globalEntry.add(new MonsterGlobalDropEntry(2439986, 1, -1, (byte) 0, 1, 1, 0)); // 1000 후캐
             globalEntry.add(new MonsterGlobalDropEntry(2439987, 1, -1, (byte) 0, 1, 1, 0)); // 5000 후캐
+            globalEntry.add(new MonsterGlobalDropEntry(2439988, 1, -1, (byte) 0, 1, 1, 0)); // 10000 후캐
+            globalEntry.add(new MonsterGlobalDropEntry(2439989, 1, -1, (byte) 0, 1, 1, 0)); // 50000 후캐
         }
 
         for (final MonsterGlobalDropEntry de : globalEntry) {
@@ -593,8 +600,8 @@ public final class MapleMap {
 
             int chance = de.chance;
 
-            // 2439987: 몬스터 레벨 기반 확률
-            if (de.itemId == 2439987) {
+            // 2439986: 몬스터 레벨 기반 확률
+            if (de.itemId == 2439986) {
                 final int lvl = mob.getStats().getLevel();
 
                 final double A = 289.9390336;
@@ -605,7 +612,7 @@ public final class MapleMap {
                 chance = (int) Math.max(0, Math.min(999999, Math.round(dyn)));
             }
 
-            if (Randomizer.nextInt(999999) < (long) (chance * totalItemDropMultiplier) && (de.continent < 0 || (de.continent < 10 && mapid / 100000000 == de.continent) || (de.continent < 100 && mapid / 10000000 == de.continent) || (de.continent < 1000 && mapid / 1000000 == de.continent))) {
+            if (Randomizer.nextInt(999999) < (long) chance * sdroprate && (de.continent < 0 || (de.continent < 10 && mapid / 100000000 == de.continent) || (de.continent < 100 && mapid / 10000000 == de.continent) || (de.continent < 1000 && mapid / 1000000 == de.continent))) {
                 pos.x = mobpos + (nIdx % 2 == 0 ? (xPosPlus * nIdx) : -(xPosPlus * (nIdx - 1)));
                 if (de.itemId == 0) {
                     //chr.modifyCSPoints(1, (int) ((Randomizer.nextInt(cashz) + cashz + cashModifier) * (chr.getStat().cashBuff / 100.0) * chr.getCashMod()), true);
@@ -645,7 +652,7 @@ public final class MapleMap {
             }
         }
         for (final MonsterDropEntry de : questEntry) {
-            if (Randomizer.nextInt(999999) < (long) (de.chance * totalItemDropMultiplier)) {
+            if (Randomizer.nextInt(999999) < de.chance * sdroprate) {
                 if (de.itemId == 4310004) {
                     if (mob.getStats().getLevel() < 71) {
                         continue;
@@ -785,6 +792,21 @@ public final class MapleMap {
         final MapleSquad sqd = getSquadByMap();
         final boolean instanced = sqd != null || monster.getEventInstance() != null || getEMByMap() != null;
         int dropOwner = monster.killBy(chr, lastSkill);
+
+        if (chr != null
+                && chr.isAlive()
+                && chr.getQuestStatus(10832) == 1
+                && monster.getMobExp() > 0
+                && Randomizer.nextInt(100) < 5) {
+            final MapleMonster meggrang = MapleLifeFactory.getMonster(9500422);
+            if (meggrang != null) {
+                chr.dropMessage(6, "메그랑이 나타났다!!!");
+                final Point spawnPos = new Point(chr.getPosition());
+                spawnPos.x += Randomizer.nextInt(121) - 60;
+                chr.getMap().spawnMonsterOnGroundBelow(meggrang, spawnPos);
+            }
+        }
+
         switch (monster.getId()) {
             case 8145102:
             case 8145202:
@@ -2157,6 +2179,33 @@ public final class MapleMap {
                     final byte rand = (byte) Randomizer.rand(2, 10);
                     chr.modifyCSPoints(1, 100 * rand, false);
                     chr.getClient().getSession().write(MaplePacketCreator.showGainNx(100, rand));
+                    removeMapItemAfterPickup(chr, mapitem);
+                    chr.getClient().getSession().write(MaplePacketCreator.enableActions());
+
+                    picked++;
+                    continue;
+                } else if (itemId == 2439986 || itemId == 2439987
+                        || itemId == 2439988 || itemId == 2439989) {
+                    mapitem.setPickedUp(true);
+
+                    int amount = 0;
+                    switch (itemId) {
+                        case 2439986:
+                            amount = 1000;
+                            break;
+                        case 2439987:
+                            amount = 5000;
+                            break;
+                        case 2439988:
+                            amount = 10000;
+                            break;
+                        case 2439989:
+                            amount = 50000;
+                            break;
+                    }
+
+                    chr.modifyCSPoints(3, amount, false);
+                    chr.getClient().getSession().write(MaplePacketCreator.showGainACash(amount, (byte) 1));
                     removeMapItemAfterPickup(chr, mapitem);
                     chr.getClient().getSession().write(MaplePacketCreator.enableActions());
 
