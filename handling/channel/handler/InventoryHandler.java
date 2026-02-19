@@ -52,7 +52,6 @@ import tools.data.MaplePacketLittleEndianWriter;
 import tools.packet.CSPacket;
 import tools.packet.PetPacket;
 import tools.packet.PlayerShopPacket;
-import constants.ServerConstants;
 import client.MapleCharacter;
 import client.MapleCharacterUtil;
 
@@ -432,34 +431,14 @@ public class InventoryHandler {
             case 2000025:
             case 2000026:
             case 2000027: //원클릭큐브
-                if (chr.cubeitemid < 0) { // 최초 장비 셋팅
-
-                    c.getSession().write(MaplePacketCreator.enableActions());
-                    c.getPlayer().getClient().removeClickedNPC();
-                    NPCScriptManager.getInstance().start(c, 9000002, "miracle");
-
-                    return;
-                }
-                if (chr.cubeitemid == 0) { // 변경 장비 셋팅
-
+                if (chr.cubeitemid < 0 || chr.cubeitemid == 0) { // 최초/변경 장비 셋팅
                     c.getSession().write(MaplePacketCreator.enableActions());
                     c.getPlayer().getClient().removeClickedNPC();
                     NPCScriptManager.getInstance().start(c, 9000002, "miracle");
                     return;
                 }
 
-                boolean use = false;
-                int cubeid = 0;
-
-                if (itemId == 2000024) { // [원클릭] 미라클 큐브
-                    cubeid = 5062000;
-                } else if (itemId == 2000025) { // [원클릭] 마스터 미라클 큐브
-                    cubeid = 5062002;
-                } else if (itemId == 2000026) { // [원클릭] 레드 큐브
-                    cubeid = 5062100;
-                } else if (itemId == 2000027) {
-                }
-
+                final int cubeid = getOneClickCubeCashItemId(itemId);
                 if (cubeid <= 0) {
                     c.getSession().write(MaplePacketCreator.enableActions());
                     return;
@@ -473,13 +452,13 @@ public class InventoryHandler {
                 }
 
                 if (chr.cubeitemid > 1 && chr.cubeitemid != checkItem.getItemId()) {
-                    c.getPlayer().dropMessage(5, "설정된 아이템이 변경되어 재설정할 수 없습니다. 채널을 변경하셔서 아이템을 새로이 등록해 주세요.");
+                    chr.setPendingOneClickCube(itemId, "원클릭 큐브 대상 아이템이 변경되었습니다. 새 아이템으로 등록하고 진행하시겠습니까?", slot);
+                    NPCScriptManager.getInstance().start(c, 9000002, "miracle_confirm");
                     c.getSession().write(MaplePacketCreator.enableActions());
                     return;
                 }
 
                 final Equip checkEq = (Equip) checkItem;
-
                 if (checkEq.getState() >= 5) {
                     final MapleCharacter p = c.getPlayer();
 
@@ -497,233 +476,9 @@ public class InventoryHandler {
                     }
                 }
 
-                use = MapleInventoryManipulator.removeById(c, MapleInventoryType.CASH, cubeid, 1, false, false);
-
+                final boolean use = MapleInventoryManipulator.removeById(c, MapleInventoryType.CASH, cubeid, 1, false, false);
                 if (use && cubeid > 0) {
-                    final Item item = c.getPlayer().getInventory(MapleInventoryType.EQUIP).getItem((byte) 1);
-                    if (item == null) {
-                        c.getPlayer().dropMessage(5, "설정된 아이템이 없어 재설정할 수 없습니다.");
-                        c.getSession().write(MaplePacketCreator.enableActions());
-                        return;
-                    }
-
-                    if (chr.cubeitemid > 1 && chr.cubeitemid != item.getItemId()) { //설정된 값이 안맞으면 
-                        c.getPlayer().dropMessage(5, "설정된 아이템이 변경되어 재설정할 수 없습니다. 채널을 변경하셔서 아이템을 새로이 등록해 주세요.");
-                        c.getSession().write(MaplePacketCreator.enableActions());
-                        return;
-                    }
-                    if (item != null && c.getPlayer().getInventory(MapleInventoryType.USE).getNumFreeSlot() >= 1) {
-                        final Equip eq = (Equip) item;
-                        if (chr.cubeitemid == 1) { // 확인 값 1로 변경시
-                            chr.cubeitemid = eq.getItemId();
-                        }
-                        int piece = 0;
-                        if (eq.getState() >= 5) {
-                            final List<List<StructPotentialItem>> pots = new LinkedList<>(MapleItemInformationProvider.getInstance().getAllPotentialInfo().values());
-
-                            final MapleItemInformationProvider ii = MapleItemInformationProvider.getInstance();
-                            final Map<String, Integer> eqstats = ii.getEquipStats(eq.getItemId());
-                            if (!eqstats.containsKey("tuc") || eqstats.containsKey("tuc") && eqstats.get("tuc") == 0) {
-                                c.getPlayer().dropMessage(5, "설정된 아이템은 업그레이드 횟수가 없어 재설정할 수 없습니다.");
-                                chr.cubeitemid = 0; // 재설정으로 보냄
-                                c.getSession().write(MaplePacketCreator.enableActions());
-                                return;
-                            }
-                            /*
-                                    
-                             eqstats.containsKey("tuc")
-                             */
-                            final int reqLevel = (ii.getReqLevel(eq.getItemId()) < 10 ? 10 : ii.getReqLevel(eq.getItemId()) / 10);
-                            final int reqMeso = (reqLevel > 12 ? 128000 : reqLevel > 7 ? 32000 : reqLevel > 3 ? 8000 : 2000);
-                            if (c.getPlayer().getMeso() > reqMeso) {
-                                int rank = 0;
-                                int prop = 0;
-                                if (cubeid == 5062000) { // 미라클 큐브 등급 업 확률
-                                    prop = 0; // 야 이거 2퍼가 아니라 0.2퍼네 일단 기본값 / 1당 0.1%
-                                    if (eq.getState() == 6) {
-                                        prop = 0;  // 에픽 -> 유니크
-                                    } else if (eq.getState() == 5) {
-                                        prop = 10;  // 레어 -> 에픽
-                                    }
-                                    if ((eq.getPotential1() > 30000 && eq.getPotential1() < 40000)) {
-                                        c.getPlayer().dropMessage(5, "이 아이템의 잠재 능력은 재설정할 수 없습니다.");
-                                        c.getSession().write(MaplePacketCreator.enableActions());
-                                        return;
-                                    }
-                                    piece = 2430112; // 미라클 큐브 조각
-                                }
-                                if (cubeid == 5062002) { // 마스터 미라클 큐브 등급 업 확률
-                                    prop = 0; //
-                                    if (eq.getState() == 6) {
-                                        prop = 10;  // 에픽 -> 유니크
-                                    } else if (eq.getState() == 5) {
-                                        prop = 30;  // 레어 -> 에픽
-                                    }
-                                    piece = 2430481; // 마스터 미라클 큐브 조각
-                                }
-                                if (cubeid == 5062100) { // 레드 큐브 등급 업 확률
-                                    prop = 0; // 3% 기본값
-                                    if (eq.getState() == 6) {
-                                        prop = 30;  // 에픽 -> 유니크
-                                    } else if (eq.getState() == 5) {
-                                        prop = 50;  // 레어 -> 에픽
-                                    }
-                                    piece = 2431893; // 레드 큐브 조각
-                                }
-
-                                if (ServerConstants.cubeDayValue > 1.0) {
-                                    prop *= ServerConstants.cubeDayValue;
-                                }
-
-                                if (eq.getState() == 7) {
-                                    if ((eq.getPotential1() > 30000 && eq.getPotential1() < 30041)
-                                            || eq.getPotential1() == 30400 || eq.getPotential1() == 30401 || eq.getPotential1() == 30402 || eq.getPotential1() == 30403) {
-                                        rank = -7; // 유니크
-                                    } else {
-                                        rank = Randomizer.nextInt(1000) < prop ? -8 : -7; // 유니크 > 레전드리
-                                    }
-                                } else if (eq.getState() == 6) {
-                                    rank = Randomizer.nextInt(1000) < prop ? -7 : -6; // 에픽 > 유니크
-                                } else if (eq.getState() == 5) {
-                                    rank = Randomizer.nextInt(1000) < prop ? -6 : -5; // 레어 > 에픽
-                                }
-//                            c.getPlayer().dropMessage(5, "rank  : " + rank + " | " + eq.getItemId() + " | " + eq.getPosition());
-
-                                int new_state = Math.abs(rank);
-
-                                if (new_state > 12 || new_state < 5) { //보정
-                                    new_state = 5;
-                                }
-
-                                StructPotentialItem pot2 = pots.get(90).get(reqLevel);
-//                            c.getPlayer().dropMessage(5, "통과 : " + pot2.potentialID);
-                                final int lines = (eq.getPotential3() != 0 ? 3 : 2);
-                                for (int i = 0; i < lines; i++) {
-                                    boolean rewarded = false;
-                                    while (!rewarded) { // Randomizer.nextInt(pots.size()) >> 이게 레어가 나오면 ㄱㄱ
-                                        int a = Randomizer.nextInt(pots.size());
-                                        StructPotentialItem pot = pots.get(a).get(reqLevel);
-
-                                        if (pot != null && pot.reqLevel / 10 <= reqLevel && GameConstants.optionTypeFits(pot.optionType, eq.getItemId(), pot.potentialID) && GameConstants.potentialIDFits(pot.potentialID, new_state, i)) {
-                                            if (pot.boss && pot.incDAMr > 0) { //보공일 때
-                                                double per = 30d; //확률
-                                                double secondRandom = Math.random() * 100;
-                                                if (secondRandom > per) {
-                                                    continue;
-                                                } //미당첨 새로 옵션 뽑음
-                                            } else if (pot.ignoreTargetDEF > 0) { //방무일 때
-                                                double per = 50d; //확률
-                                                double secondRandom = Math.random() * 100;
-                                                if (secondRandom > per) {
-                                                    continue;
-                                                } //미당첨
-                                            } else if (pot.incRewardProp > 0) { //아이템 드롭률 증가일 때
-                                                double per = 10d; //확률
-                                                double secondRandom = Math.random() * 100;
-                                                if (secondRandom > per) {
-                                                    continue;
-                                                } //미당첨 새로 옵션 뽑음
-                                            } else if (pot.incMesoProp > 0) { //메소 획득량 증가일 때
-                                                double per = 10d; //확률
-                                                double secondRandom = Math.random() * 100;
-                                                if (secondRandom > per) {
-                                                    continue;
-                                                } //미당첨
-                                            } else {
-                                                switch (pot.potentialID) {
-                                                    case 30040: //쓸어블
-                                                    case 30400: //쓸컴뱃
-                                                    case 30401: //쓸윈부
-                                                    case 31003: //쓸샾
-                                                    {
-                                                        double per = 15d; //확률
-                                                        double secondRandom = Math.random() * 100;
-                                                        if (secondRandom > per) {
-                                                            continue;
-                                                        } //미당첨
-                                                        break;
-                                                    }
-                                                    case 20051: //공격력 %
-                                                    case 30051:
-                                                    case 30023:
-                                                    case 20052: //마력 %
-                                                    case 30052:
-                                                    case 30024: {
-                                                        double per = 35d; //확률
-                                                        double secondRandom = Math.random() * 100;
-                                                        if (secondRandom > per) {
-                                                            continue;
-                                                        } //미당첨
-                                                        break;
-                                                    }
-                                                    //여기서부터
-//                                                case 30041:
-//                                                case 30042:
-//                                                case 30043:
-//                                                case 30044: {
-//                                                //여기까지 힘,덱,인,럭 유니크 옵션
-//                                                    double per = 20d; //확률
-//                                                    double secondRandom = Math.random() * 100;
-//                                                    if (secondRandom > per) {
-//                                                        continue;
-//                                                    } //미당첨
-//                                                    break;
-//                                                }
-//                                                //여기서부터
-//                                                case 30015:
-//                                                case 30016:
-//                                                case 30017:
-//                                                case 30018: {
-//                                                //여기까지 힘,덱,인,럭 레전드리 옵션
-//                                                    double per = 20d; //확률
-//                                                    double secondRandom = Math.random() * 100;
-//                                                    if (secondRandom > per) {
-//                                                        continue;
-//                                                    } //미당첨
-//                                                    break;
-//                                                }
-                                                }
-                                            }
-
-                                            if (i == 0) {
-                                                eq.setPotential1(pot.potentialID);
-                                            } else if (i == 1) {
-                                                eq.setPotential2(pot.potentialID);
-                                            } else if (i == 2) {
-                                                eq.setPotential3(pot.potentialID);
-                                            }
-                                            rewarded = true;
-//                                        if (pot.incPADr > 0 || pot.incMADr > 0) {
-//                                            System.err.println((i + 1) + "번째 옵션 코드 : " + pot.potentialID);
-//                                        }
-                                            if (i == lines) {
-                                                break;
-                                            }
-//                                        System.out.print(a + " : 큐브 옵션\r\n");
-//                                        c.getPlayer().dropMessage(5, "a : " + a);
-//                                        c.getPlayer().dropMessage(5, "pot.potentialID : " + pot.potentialID);
-                                        }
-                                    }
-                                }
-                                c.getPlayer().gainMeso(-(reqMeso), true, true);
-                            } else {
-                                c.getPlayer().dropMessage(1, "'" + ii.getName(eq.getItemId()) + "'(을)를 감정하기 위해서는 " + reqMeso + "메소가 필요합니다.");
-                                c.getSession().write(MaplePacketCreator.enableActions());
-                                return;
-                            }
-                            c.getSession().write(MaplePacketCreator.scrolledItem(toUse, item, false, true));
-                            c.getPlayer().getMap().broadcastMessage(c.getPlayer(), MaplePacketCreator.getPotentialEffect(c.getPlayer().getId(), 1), true);
-                            c.getPlayer().forceReAddItem_NoUpdate(item, MapleInventoryType.EQUIP);
-                            if (piece > 0) {
-                                MapleInventoryManipulator.addById(c, piece, (short) 1, "Cube" + " on " + FileoutputUtil.CurrentReadable_Date());
-                            }
-                            chr.setNextConsume(time + (1 * 1000)); // 쿨타임
-                        } else {
-                            c.getPlayer().dropMessage(5, "이 아이템의 잠재 능력은 재설정할 수 없습니다.");
-                        }
-                    } else {
-                        c.getPlayer().dropMessage(5, "소비 아이템 여유 공간이 부족하여 잠재 능력 재설정을 실패하였습니다.");
-                    }
+                    applyOneClickCube(c, chr, itemId, slot, cubeid, time);
                 } else {
                     c.getPlayer().dropMessage(5, "연결된 큐브가 부족하여 잠재 능력 재설정을 실패하였습니다.");
                 }
@@ -748,35 +503,255 @@ public class InventoryHandler {
         }
     }
 
+    private static int getOneClickCubeCashItemId(final int itemId) {
+        switch (itemId) {
+            case 2000024:
+                return 5062000;
+            case 2000025:
+                return 5062002;
+            case 2000026:
+                return 5062100;
+            default:
+                return 0;
+        }
+    }
+
+    private static int getCubePieceItemId(final int cubeId) {
+        switch (cubeId) {
+            case 5062000:
+                return 2430112;
+            case 5062002:
+                return 2430481;
+            case 5062100:
+                return 2431893;
+            default:
+                return 0;
+        }
+    }
+
+    private static int getPotentialExclusiveGroup(final int potentialId) {
+        switch (potentialId) {
+            case 30601:
+            case 30602:
+                return 1; // 보스 공격 시 데미지
+            case 10291:
+            case 20291:
+            case 30291:
+                return 2; // 방어율 무시
+            case 10070:
+            case 20070:
+            case 30070:
+                return 3; // 총 데미지
+            default:
+                return 0;
+        }
+    }
+
+    private static boolean hasExclusivePotentialConflict(final int selectedPotentialId, final int candidatePotentialId) {
+        if (selectedPotentialId <= 0 || candidatePotentialId <= 0) {
+            return false;
+        }
+        final int selectedGroup = getPotentialExclusiveGroup(selectedPotentialId);
+        final int candidateGroup = getPotentialExclusiveGroup(candidatePotentialId);
+        return selectedGroup != 0 && selectedGroup == candidateGroup;
+    }
+
+    private static boolean hasExclusivePotentialConflictForLine(final Equip eq, final int candidatePotentialId, final int lineIndex) {
+        if (lineIndex >= 1 && hasExclusivePotentialConflict(eq.getPotential1(), candidatePotentialId)) {
+            return true;
+        }
+        if (lineIndex >= 2 && hasExclusivePotentialConflict(eq.getPotential2(), candidatePotentialId)) {
+            return true;
+        }
+        return false;
+    }
+
+    private static StructPotentialItem getCustomEarringPotentialCandidate(final MapleItemInformationProvider ii, final Equip eq, final int reqLevel, final int newState, final int lineIndex) {
+        if (eq == null || ii == null) {
+            return null;
+        }
+        final int itemReqLevel = ii.getReqLevel(eq.getItemId());
+        if (eq.getItemId() / 10000 != 103 || itemReqLevel < 50 || itemReqLevel > 120) { // 귀고리 + Lv50~120
+            return null;
+        }
+
+        int customPotentialId = 0;
+        if (newState == 6 && lineIndex == 0) {
+            customPotentialId = 20656; // 에픽 1줄 전용 후보
+        } else if (newState == 7 && lineIndex == 0) {
+            customPotentialId = 30656; // 유니크 1줄 전용 후보
+        } else if (newState == 7 && lineIndex > 0) {
+            customPotentialId = 20656; // 유니크 2/3줄 에픽 후보
+        }
+
+        if (customPotentialId <= 0) {
+            return null;
+        }
+
+        final List<StructPotentialItem> infos = ii.getPotentialInfo(customPotentialId);
+        if (infos == null) {
+            return null;
+        }
+        if (reqLevel < 0 || reqLevel >= infos.size()) {
+            return null;
+        }
+        return infos.get(reqLevel);
+    }
+
+    private static StructPotentialItem pickPotentialCandidate(final List<List<StructPotentialItem>> pots, final MapleItemInformationProvider ii, final Equip eq, final int reqLevel, final int newState, final int lineIndex) {
+        final StructPotentialItem custom = getCustomEarringPotentialCandidate(ii, eq, reqLevel, newState, lineIndex);
+        if (custom != null && Randomizer.nextInt(50) == 0) { // 2%
+            return custom;
+        }
+        return pots.get(Randomizer.nextInt(pots.size())).get(reqLevel);
+    }
+
+    private static boolean isBlockedOneClickCubeItem(final int itemId) {
+        switch (itemId) {
+            case 1112402: // 리플렉스 링
+            case 1132000: // 허리띠류
+            case 1132001:
+            case 1132002:
+            case 1132003:
+            case 1132004:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static boolean applyOneClickCube(final MapleClient c, final MapleCharacter chr, final int oneClickItemId, final byte slot, final int cubeid, final long time) {
+        final Item item = c.getPlayer().getInventory(MapleInventoryType.EQUIP).getItem((byte) 1);
+        if (item == null) {
+            c.getPlayer().dropMessage(5, "설정된 아이템이 없어 재설정할 수 없습니다.");
+            return false;
+        }
+
+        if (chr.cubeitemid > 1 && chr.cubeitemid != item.getItemId()) {
+            chr.cubeitemid = item.getItemId();
+            c.getPlayer().dropMessage(5, "원클릭 큐브 대상 아이템이 변경되어 새 아이템으로 자동 등록되었습니다.");
+        }
+
+        if (c.getPlayer().getInventory(MapleInventoryType.USE).getNumFreeSlot() < 1) {
+            c.getPlayer().dropMessage(5, "소비 아이템 여유 공간이 부족하여 잠재 능력 재설정을 실패하였습니다.");
+            return false;
+        }
+
+        if (isBlockedOneClickCubeItem(item.getItemId())) {
+            c.getPlayer().dropMessage(5, "이 아이템의 잠재능력은 재설정 하실 수 없습니다.");
+            return false;
+        }
+
+        final Equip eq = (Equip) item;
+        if (eq.getState() < 5) {
+            c.getPlayer().dropMessage(5, "잠재능력을 재설정 할 수 없습니다..");
+            return false;
+        }
+
+        if (cubeid == 5062000 && eq.getState() >= 7) {
+            c.getPlayer().dropMessage(5, "에픽이상의 아이템은 재설정 하실 수 없습니다.");
+            return false;
+        }
+        if (cubeid == 5062100 && eq.getState() >= 8) {
+            c.getPlayer().dropMessage(5, "에픽이상의 아이템은 재설정 하실 수 없습니다.");
+            return false;
+        }
+
+        if (chr.cubeitemid == 1) {
+            chr.cubeitemid = eq.getItemId();
+        }
+
+        eq.renewPotential(false, c.getPlayer(), cubeid);
+        if (cubeid == 5062100 || cubeid == 5062002) {
+            eq.setCubedCount(eq.getCubedCount() + 1);
+        }
+        revealPotentialImmediately(eq);
+
+        final Item toUse = chr.getInventory(MapleInventoryType.USE).getItem(slot);
+        if (toUse == null || toUse.getQuantity() < 1 || toUse.getItemId() != oneClickItemId) {
+            return false;
+        }
+
+        c.getSession().write(MaplePacketCreator.scrolledItem(toUse, item, false, true));
+        c.getSession().write(MaplePacketCreator.getPotentialEffect(c.getPlayer().getId(), 1));
+        c.getPlayer().forceReAddItem_NoUpdate(item, MapleInventoryType.EQUIP);
+
+        final int piece = getCubePieceItemId(cubeid);
+        if (piece > 0) {
+            MapleInventoryManipulator.addById(c, piece, (short) 1, "Cube" + " on " + FileoutputUtil.CurrentReadable_Date());
+        }
+
+        chr.setNextConsume(time + (1 * 1000));
+        return true;
+    }
+
+    private static void revealPotentialImmediately(final Equip eq) {
+        if (eq.getState() != 1) {
+            return;
+        }
+
+        final MapleItemInformationProvider ii = MapleItemInformationProvider.getInstance();
+        final int reqLevel = ii.getReqLevel(eq.getItemId()) / 10;
+        final List<List<StructPotentialItem>> pots = new LinkedList<List<StructPotentialItem>>(ii.getAllPotentialInfo().values());
+
+        int new_state = Math.abs(eq.getPotential1());
+        if (new_state > 7 || new_state < 5) {
+            new_state = 5;
+        }
+
+        final int lines = (eq.getPotential2() != 0 ? 3 : 2);
+        boolean special = false;
+        if (eq.getCubedCount() >= 10) {
+            if (Randomizer.rand(1, 100) <= 70) {
+                special = true;
+                eq.setCubedCount(0);
+            }
+        }
+
+        while (eq.getState() != new_state) {
+            for (int i = 0; i < lines; i++) {
+                boolean rewarded = false;
+                while (!rewarded) {
+                    StructPotentialItem pot = pickPotentialCandidate(pots, ii, eq, reqLevel, new_state, i);
+                    if (pot != null
+                            && pot.reqLevel / 10 <= reqLevel
+                            && GameConstants.optionTypeFits(pot.optionType, eq.getItemId(), pot.potentialID)
+                            && GameConstants.potentialIDFits(pot.potentialID, new_state, i)
+                            && !hasExclusivePotentialConflictForLine(eq, pot.potentialID, i)) {
+                        if (i == 0) {
+                            if (special && !GameConstants.isWeapon(eq.getItemId())) {
+                                eq.setPotential1((new_state - 4) * 10000 + 41 + Randomizer.rand(0, 3));
+                            } else {
+                                eq.setPotential1(pot.potentialID);
+                            }
+                        } else if (i == 1) {
+                            if (special && !GameConstants.isWeapon(eq.getItemId())) {
+                                eq.setPotential2((new_state - 4) * 10000 + 41 + Randomizer.rand(0, 3));
+                            } else {
+                                eq.setPotential2(pot.potentialID);
+                            }
+                        } else if (i == 2) {
+                            eq.setPotential3(pot.potentialID);
+                        }
+                        rewarded = true;
+                    }
+                }
+            }
+        }
+    }
+
     public static void processOneClickCubeFromScript(final MapleClient c, final MapleCharacter chr, final int itemId, final byte slot) {
         if (c == null || chr == null) {
             return;
         }
 
         final long time = System.currentTimeMillis();
-        // 아래 로직은 UseItem()의 case 2000024~2000027 블록과 동일하게 유지해야 합니다.
-        // 핵심은: itemId(2000024~2000027) -> cubeid(5062xxx) 매핑 후,
-        // EQUIP 1번 아이템에 큐브 적용을 1회 실행시키는 것입니다.
-
-        // ✅ 1) cubeid 매핑 (UseItem과 동일)
-        int cubeid = 0;
-        if (itemId == 2000024) {
-            cubeid = 5062000;
-        } else if (itemId == 2000025) {
-            cubeid = 5062002;
-        } else if (itemId == 2000026) {
-            cubeid = 5062100;
-        } else if (itemId == 2000027) {
-            // 필요 시 여기도 지정
-            // cubeid = ????;
-        }
-
+        final int cubeid = getOneClickCubeCashItemId(itemId);
         if (cubeid <= 0) {
             c.getSession().write(MaplePacketCreator.enableActions());
             return;
         }
 
-        // ✅ 2) 원본 로직과 동일한 체크
         if (chr.cubeitemid < 0 || chr.cubeitemid == 0) {
             c.getSession().write(MaplePacketCreator.enableActions());
             c.getPlayer().getClient().removeClickedNPC();
@@ -790,273 +765,20 @@ public class InventoryHandler {
             c.getSession().write(MaplePacketCreator.enableActions());
             return;
         }
+
         if (chr.cubeitemid > 1 && chr.cubeitemid != checkItem.getItemId()) {
-            c.getPlayer().dropMessage(5, "설정된 아이템이 변경되어 재설정할 수 없습니다. 채널을 변경하셔서 아이템을 새로이 등록해 주세요.");
-            c.getSession().write(MaplePacketCreator.enableActions());
-            return;
+            chr.cubeitemid = checkItem.getItemId();
+            c.getPlayer().dropMessage(5, "원클릭 큐브 대상 아이템이 변경되어 새 아이템으로 자동 등록되었습니다.");
         }
 
-        // ✅ 3) cube 소모 및 실제 큐브 실행
-        boolean use = MapleInventoryManipulator.removeById(c, MapleInventoryType.CASH, cubeid, 1, false, false);
-        if (!use) {
-            c.getSession().write(MaplePacketCreator.enableActions());
-            return;
-        }
-
-        // ✅ 4) 이후의 “잠재 재설정 실제 적용” 부분은
-        // UseItem()의 원클릭큐브 블록에서
-        //    if (use && cubeid > 0) { ... }
-        // 이 안쪽 로직을 그대로 가져오셔야 100% 동일 동작합니다.
-        //
-        // ⚠️ 여기부터는 서버마다 커스텀 분기/이펙트/브로드캐스트가 섞여있을 수 있어서,
-        //    제가 지금 답변에 100줄 넘게 그대로 붙이면 오히려 복붙 실수 위험이 큽니다.
-        //
-        // 따라서:
-        //  - InventoryHandler.java에서
-        //    "if (use && cubeid > 0) {" (원클릭큐브 블록 내부)
-        //    부터 그 블록의 끝까지를
-        //    이 함수 안으로 그대로 복사해 넣어주세요.
-        //
-        // ✅ 복사 앵커:
-        //   UseItem() -> case 2000024~2000027 -> "if (use && cubeid > 0) {"
-        //
-        // ✅ 붙여넣기 앵커:
-        //   바로 이 주석 아래.
+        final boolean use = MapleInventoryManipulator.removeById(c, MapleInventoryType.CASH, cubeid, 1, false, false);
         if (use && cubeid > 0) {
-            final Item item = c.getPlayer().getInventory(MapleInventoryType.EQUIP).getItem((byte) 1);
-            if (item == null) {
-                c.getPlayer().dropMessage(5, "설정된 아이템이 없어 재설정할 수 없습니다.");
-                c.getSession().write(MaplePacketCreator.enableActions());
-                return;
-            }
-
-            if (chr.cubeitemid > 1 && chr.cubeitemid != item.getItemId()) { //설정된 값이 안맞으면 
-                c.getPlayer().dropMessage(5, "설정된 아이템이 변경되어 재설정할 수 없습니다. 채널을 변경하셔서 아이템을 새로이 등록해 주세요.");
-                c.getSession().write(MaplePacketCreator.enableActions());
-                return;
-            }
-            if (item != null && c.getPlayer().getInventory(MapleInventoryType.USE).getNumFreeSlot() >= 1) {
-                final Equip eq = (Equip) item;
-                if (chr.cubeitemid == 1) { // 확인 값 1로 변경시
-                    chr.cubeitemid = eq.getItemId();
-                }
-                int piece = 0;
-                if (eq.getState() >= 5) {
-                    final List<List<StructPotentialItem>> pots = new LinkedList<>(MapleItemInformationProvider.getInstance().getAllPotentialInfo().values());
-
-                    final MapleItemInformationProvider ii = MapleItemInformationProvider.getInstance();
-                    final Map<String, Integer> eqstats = ii.getEquipStats(eq.getItemId());
-                    if (!eqstats.containsKey("tuc") || eqstats.containsKey("tuc") && eqstats.get("tuc") == 0) {
-                        c.getPlayer().dropMessage(5, "설정된 아이템은 업그레이드 횟수가 없어 재설정할 수 없습니다.");
-                        chr.cubeitemid = 0; // 재설정으로 보냄
-                        c.getSession().write(MaplePacketCreator.enableActions());
-                        return;
-                    }
-                    /*
-                                    
-                     eqstats.containsKey("tuc")
-                     */
-                    final int reqLevel = (ii.getReqLevel(eq.getItemId()) < 10 ? 10 : ii.getReqLevel(eq.getItemId()) / 10);
-                    final int reqMeso = (reqLevel > 12 ? 128000 : reqLevel > 7 ? 32000 : reqLevel > 3 ? 8000 : 2000);
-                    if (c.getPlayer().getMeso() > reqMeso) {
-                        int rank = 0;
-                        int prop = 0;
-                        if (cubeid == 5062000) { // 미라클 큐브 등급 업 확률
-                            prop = 0; // 야 이거 2퍼가 아니라 0.2퍼네 일단 기본값 / 1당 0.1%
-                            if (eq.getState() == 6) {
-                                prop = 0;  // 에픽 -> 유니크
-                            } else if (eq.getState() == 5) {
-                                prop = 10;  // 레어 -> 에픽
-                            }
-                            if ((eq.getPotential1() > 30000 && eq.getPotential1() < 40000)) {
-                                c.getPlayer().dropMessage(5, "이 아이템의 잠재 능력은 재설정할 수 없습니다.");
-                                c.getSession().write(MaplePacketCreator.enableActions());
-                                return;
-                            }
-                            piece = 2430112; // 미라클 큐브 조각
-                        }
-                        if (cubeid == 5062002) { // 마스터 미라클 큐브 등급 업 확률
-                            prop = 0; //
-                            if (eq.getState() == 6) {
-                                prop = 10;  // 에픽 -> 유니크
-                            } else if (eq.getState() == 5) {
-                                prop = 30;  // 레어 -> 에픽
-                            }
-                            piece = 2430481; // 마스터 미라클 큐브 조각
-                        }
-                        if (cubeid == 5062100) { // 레드 큐브 등급 업 확률
-                            prop = 0; // 3% 기본값
-                            if (eq.getState() == 6) {
-                                prop = 30;  // 에픽 -> 유니크
-                            } else if (eq.getState() == 5) {
-                                prop = 50;  // 레어 -> 에픽
-                            }
-                            piece = 2431893; // 레드 큐브 조각
-                        }
-
-                        if (ServerConstants.cubeDayValue > 1.0) {
-                            prop *= ServerConstants.cubeDayValue;
-                        }
-
-                        if (eq.getState() == 7) {
-                            if ((eq.getPotential1() > 30000 && eq.getPotential1() < 30041)
-                                    || eq.getPotential1() == 30400 || eq.getPotential1() == 30401 || eq.getPotential1() == 30402 || eq.getPotential1() == 30403) {
-                                rank = -7; // 유니크
-                            } else {
-                                rank = Randomizer.nextInt(1000) < prop ? -8 : -7; // 유니크 > 레전드리
-                            }
-                        } else if (eq.getState() == 6) {
-                            rank = Randomizer.nextInt(1000) < prop ? -7 : -6; // 에픽 > 유니크
-                        } else if (eq.getState() == 5) {
-                            rank = Randomizer.nextInt(1000) < prop ? -6 : -5; // 레어 > 에픽
-                        }
-//                            c.getPlayer().dropMessage(5, "rank  : " + rank + " | " + eq.getItemId() + " | " + eq.getPosition());
-
-                        int new_state = Math.abs(rank);
-
-                        if (new_state > 12 || new_state < 5) { //보정
-                            new_state = 5;
-                        }
-
-                        StructPotentialItem pot2 = pots.get(90).get(reqLevel);
-//                            c.getPlayer().dropMessage(5, "통과 : " + pot2.potentialID);
-                        final int lines = (eq.getPotential3() != 0 ? 3 : 2);
-                        for (int i = 0; i < lines; i++) {
-                            boolean rewarded = false;
-                            while (!rewarded) { // Randomizer.nextInt(pots.size()) >> 이게 레어가 나오면 ㄱㄱ
-                                int a = Randomizer.nextInt(pots.size());
-                                StructPotentialItem pot = pots.get(a).get(reqLevel);
-
-                                if (pot != null && pot.reqLevel / 10 <= reqLevel && GameConstants.optionTypeFits(pot.optionType, eq.getItemId(), pot.potentialID) && GameConstants.potentialIDFits(pot.potentialID, new_state, i)) {
-                                    if (pot.boss && pot.incDAMr > 0) { //보공일 때
-                                        double per = 30d; //확률
-                                        double secondRandom = Math.random() * 100;
-                                        if (secondRandom > per) {
-                                            continue;
-                                        } //미당첨 새로 옵션 뽑음
-                                    } else if (pot.ignoreTargetDEF > 0) { //방무일 때
-                                        double per = 50d; //확률
-                                        double secondRandom = Math.random() * 100;
-                                        if (secondRandom > per) {
-                                            continue;
-                                        } //미당첨
-                                    } else if (pot.incRewardProp > 0) { //아이템 드롭률 증가일 때
-                                        double per = 10d; //확률
-                                        double secondRandom = Math.random() * 100;
-                                        if (secondRandom > per) {
-                                            continue;
-                                        } //미당첨 새로 옵션 뽑음
-                                    } else if (pot.incMesoProp > 0) { //메소 획득량 증가일 때
-                                        double per = 10d; //확률
-                                        double secondRandom = Math.random() * 100;
-                                        if (secondRandom > per) {
-                                            continue;
-                                        } //미당첨
-                                    } else {
-                                        switch (pot.potentialID) {
-                                            case 30040: //쓸어블
-                                            case 30400: //쓸컴뱃
-                                            case 30401: //쓸윈부
-                                            case 31003: //쓸샾
-                                            {
-                                                double per = 15d; //확률
-                                                double secondRandom = Math.random() * 100;
-                                                if (secondRandom > per) {
-                                                    continue;
-                                                } //미당첨
-                                                break;
-                                            }
-                                            case 20051: //공격력 %
-                                            case 30051:
-                                            case 30023:
-                                            case 20052: //마력 %
-                                            case 30052:
-                                            case 30024: {
-                                                double per = 35d; //확률
-                                                double secondRandom = Math.random() * 100;
-                                                if (secondRandom > per) {
-                                                    continue;
-                                                } //미당첨
-                                                break;
-                                            }
-                                            //여기서부터
-//                                                case 30041:
-//                                                case 30042:
-//                                                case 30043:
-//                                                case 30044: {
-//                                                //여기까지 힘,덱,인,럭 유니크 옵션
-//                                                    double per = 20d; //확률
-//                                                    double secondRandom = Math.random() * 100;
-//                                                    if (secondRandom > per) {
-//                                                        continue;
-//                                                    } //미당첨
-//                                                    break;
-//                                                }
-//                                                //여기서부터
-//                                                case 30015:
-//                                                case 30016:
-//                                                case 30017:
-//                                                case 30018: {
-//                                                //여기까지 힘,덱,인,럭 레전드리 옵션
-//                                                    double per = 20d; //확률
-//                                                    double secondRandom = Math.random() * 100;
-//                                                    if (secondRandom > per) {
-//                                                        continue;
-//                                                    } //미당첨
-//                                                    break;
-//                                                }
-                                        }
-                                    }
-
-                                    if (i == 0) {
-                                        eq.setPotential1(pot.potentialID);
-                                    } else if (i == 1) {
-                                        eq.setPotential2(pot.potentialID);
-                                    } else if (i == 2) {
-                                        eq.setPotential3(pot.potentialID);
-                                    }
-                                    rewarded = true;
-//                                        if (pot.incPADr > 0 || pot.incMADr > 0) {
-//                                            System.err.println((i + 1) + "번째 옵션 코드 : " + pot.potentialID);
-//                                        }
-                                    if (i == lines) {
-                                        break;
-                                    }
-//                                        System.out.print(a + " : 큐브 옵션\r\n");
-//                                        c.getPlayer().dropMessage(5, "a : " + a);
-//                                        c.getPlayer().dropMessage(5, "pot.potentialID : " + pot.potentialID);
-                                }
-                            }
-                        }
-                        c.getPlayer().gainMeso(-(reqMeso), true, true);
-                    } else {
-                        c.getPlayer().dropMessage(1, "'" + ii.getName(eq.getItemId()) + "'(을)를 감정하기 위해서는 " + reqMeso + "메소가 필요합니다.");
-                        c.getSession().write(MaplePacketCreator.enableActions());
-                        return;
-                    }
-                    final Item toUse = chr.getInventory(MapleInventoryType.USE).getItem(slot);
-                    if (toUse == null || toUse.getQuantity() < 1 || toUse.getItemId() != itemId) {
-                        c.getSession().write(MaplePacketCreator.enableActions());
-                        return;
-                    }
-                    c.getSession().write(MaplePacketCreator.scrolledItem(toUse, item, false, true));
-                    c.getPlayer().getMap().broadcastMessage(c.getPlayer(), MaplePacketCreator.getPotentialEffect(c.getPlayer().getId(), 1), true);
-                    c.getPlayer().forceReAddItem_NoUpdate(item, MapleInventoryType.EQUIP);
-                    if (piece > 0) {
-                        MapleInventoryManipulator.addById(c, piece, (short) 1, "Cube" + " on " + FileoutputUtil.CurrentReadable_Date());
-                    }
-                    chr.setNextConsume(time + (1 * 1000)); // 쿨타임
-                } else {
-                    c.getPlayer().dropMessage(5, "이 아이템의 잠재 능력은 재설정할 수 없습니다.");
-                }
-            } else {
-                c.getPlayer().dropMessage(5, "소비 아이템 여유 공간이 부족하여 잠재 능력 재설정을 실패하였습니다.");
-            }
+            applyOneClickCube(c, chr, itemId, slot, cubeid, time);
         } else {
             c.getPlayer().dropMessage(5, "연결된 큐브가 부족하여 잠재 능력 재설정을 실패하였습니다.");
         }
+
         c.getSession().write(MaplePacketCreator.enableActions());
-        return;
     }
 
     public static final void UseCosmetic(final LittleEndianAccessor slea, final MapleClient c, final MapleCharacter chr) {
@@ -1439,8 +1161,8 @@ public class InventoryHandler {
                     boolean rewarded = false;
                     while (!rewarded) {
                         // System.out.println("pots :" + pots + " new_state :" + new_state + " lines :" + lines + " reqLevel :" + reqLevel);
-                        StructPotentialItem pot = pots.get(Randomizer.nextInt(pots.size())).get(reqLevel);
-                        if (pot != null && pot.reqLevel / 10 <= reqLevel && GameConstants.optionTypeFits(pot.optionType, eqq.getItemId()) && GameConstants.potentialIDFits(pot.potentialID, new_state, i)) { //optionType
+                        StructPotentialItem pot = pickPotentialCandidate(pots, ii, eqq, reqLevel, new_state, i);
+                        if (pot != null && pot.reqLevel / 10 <= reqLevel && GameConstants.optionTypeFits(pot.optionType, eqq.getItemId(), pot.potentialID) && GameConstants.potentialIDFits(pot.potentialID, new_state, i) && !hasExclusivePotentialConflictForLine(eqq, pot.potentialID, i)) { //optionType
                             //have to research optionType before making this truely sea-like
                             if (i == 0) {
                                 if (special && !GameConstants.isWeapon(eqq.getItemId())) {
@@ -2773,6 +2495,8 @@ public class InventoryHandler {
                     final Equip eq = (Equip) item;
                     if (eq.getState() >= 5) {
                         eq.renewPotential(false, c.getPlayer(), itemId);
+                        int gcc = eq.getCubedCount();
+                        eq.setCubedCount(gcc + 1);
                         c.getSession().write(MaplePacketCreator.scrolledItem(toUse, item, false, true));
                         c.getSession().write(MaplePacketCreator.getPotentialEffect(c.getPlayer().getId(), 1));
                         c.getPlayer().forceReAddItem_NoUpdate(item, MapleInventoryType.EQUIP);

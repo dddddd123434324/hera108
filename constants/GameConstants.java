@@ -2880,6 +2880,9 @@ public class GameConstants {
                 case 30401: //쓸윈부
                     //장갑만
                     return itemOptionType == 108;
+                case 20656:
+                case 30656:
+                    return itemOptionType == 103; // earring-only custom lines
             }
         }
 

@@ -3244,6 +3244,10 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
                 setStance(0);
                 to.addPlayer(this);
                 stats.relocHeal(this);
+                if (nowmapid != to.getId() && BurningHuntingFieldManager.getTrueExpMultiplier(to.getId()) > 1.0D) {
+                    dropMessage(-1, "이곳에서는 30% 추가 경험치를 얻을 수 있습니다.");
+                    dropMessage(-1, "버닝 사냥터에 입장하셨습니다.");
+                }
                 if (shouldState) {
                     to.setCheckStates(true);
                 }
@@ -3920,7 +3924,6 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
         int extrabonus = 0;
         int 맵보너스 = 0;
         int 피시보너스 = 0;
-        boolean isExpBonusMap = false;
         boolean isPenaltyMap = false;
         if (getMap().getId() == 103000800) {
             isPenaltyMap = true;
@@ -3942,6 +3945,15 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
             }
             gain += rawexp * (exprate - 1);
             total += rawexp * (exprate - 1);
+        }
+
+        final double 버닝맵배율 = BurningHuntingFieldManager.getTrueExpMultiplier(getMapId());
+        if (버닝맵배율 > 1.0D && rawexp > 0) {
+            맵보너스 = (int) Math.floor(rawexp * trueExpRate * (버닝맵배율 - 1.0D));
+            if (맵보너스 < 1) {
+                맵보너스 = 1;
+            }
+            total += 맵보너스;
         }
 
         MapleParty party = getParty();
@@ -3969,13 +3981,6 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
                     }
                 }
             }
-        }
-        if (isExpBonusMap) {
-            맵보너스 = (int) (gain * 1);
-            if (맵보너스 < 1) {
-                맵보너스 = 1;
-            }
-            total += 맵보너스;
         }
         if (isPenaltyMap) {
             gain /= 2;

@@ -377,6 +377,8 @@ public class NPCScriptSelfFunction {
         if (ranks != null && !ranks.isEmpty()) {
             StringBuilder sb = new StringBuilder();
             int n = 1;
+            final double personalItemDropMultiplier = RateManager.getTrueDropRate() * (1.0D + (vm.getClient().getPlayer().getStat().incRewardProp / 100.0D));
+            final double personalMesoDropMultiplier = RateManager.getTrueDropRate();
             Collections.sort(ranks, new Comparator<MonsterDropEntry>() {
                 @Override
                 public final int compare(final MonsterDropEntry o1, final MonsterDropEntry o2) {
@@ -470,7 +472,7 @@ public class NPCScriptSelfFunction {
                             namez = "";
                         }
                     }
-                    int chance = de.chance * RateManager.getTrueDropRate();
+                    int chance = (int) Math.round(de.chance * (de.itemId == 0 ? personalMesoDropMultiplier : personalItemDropMultiplier));
 
                     if (!MapleItemInformationProvider.getInstance().itemExists(itemId)) {
                         sb.append("wz에 존재하지 않는 아이템 : " + itemId + "\r\n");

@@ -61,22 +61,22 @@ public class RateManager {
         DISPLAY_MESO = Integer.parseInt(ServerProperties.getProperty("fakemeso"));
     }
 
-    public static int getTrueExpByLevel(final int level) { // 寃쏀뿕移?諛곗쑉 ?섏젙
+    public static int getTrueExpByLevel(final int level) { // 경험치 배율 수정
         final int tier;
         if (level >= 221) {
             tier = 1;
         } else if (level >= 200) {
-            tier = 2;      // 200~220
+            tier = 1;      // 200~220
         } else if (level >= 151) {
-            tier = 3;      // 151~199
+            tier = 2;      // 151~199
         } else if (level >= 121) {
-            tier = 5;      // 121~150
+            tier = 3;      // 121~150
         } else if (level >= 101) {
-            tier = 8;      // 101~120
+            tier = 4;      // 101~120
         } else if (level >= 10) {
-            tier = 10;      // 10~100
+            tier = 5;      // 10~100
         } else {
-            tier = 10;
+            tier = 5;
         }
         return tier * EXP * TRUEEXP;
     }

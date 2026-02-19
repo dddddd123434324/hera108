@@ -205,6 +205,7 @@ public class Start {
         Timer.WorldTimer.getInstance().register(MapleQuest::resetGoldrichquestDailyLimit, 86400000L, goldrichquestMidnightDelay);
 
         Timer.WorldTimer.getInstance().register(RankingWorker::run, 30 * 60 * 1000L);
+        DatabaseBackupManager.getInstance().startDailyBackupScheduler();
         new MemoryUsageWatcher(88).start();
         new DeadLockDetector(60, DeadLockDetector.RESTART).start();
     }

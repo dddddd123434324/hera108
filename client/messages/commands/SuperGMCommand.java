@@ -841,6 +841,87 @@ public class SuperGMCommand {
         }
     }
 
+    public static class 고정엔피시조정 extends CommandExecute {
+
+        @Override
+        public int execute(MapleClient c, String[] splitted) {
+            if (splitted.length < 2) {
+                c.getPlayer().dropMessage(5, "조정할 엔피시 코드를 입력해주세요.");
+                return 0;
+            }
+
+            final int npcId;
+            try {
+                npcId = Integer.parseInt(splitted[1]);
+            } catch (NumberFormatException e) {
+                c.getPlayer().dropMessage(5, "올바른 엔피시 코드를 입력해주세요.");
+                return 0;
+            }
+
+            MapleNPC npc = MapleLifeFactory.getNPC(npcId);
+            Connection con = null;
+            PreparedStatement ps = null;
+            ResultSet rs = null;
+            try {
+                con = DatabaseConnection.getConnection();
+                if (npc != null && !npc.getName().equals("MISSINGNO")) {
+                    ps = con.prepareStatement("SELECT * FROM spawnnpc WHERE mapid = ? && npcid = ?");
+                    ps.setInt(1, c.getPlayer().getMapId());
+                    ps.setInt(2, npcId);
+                    rs = ps.executeQuery();
+                    if (!rs.next()) {
+                        c.getPlayer().dropMessage(5, "현재 맵에는 설치한 고정 엔피시가 없습니다.");
+                        return 0;
+                    }
+                    ps.close();
+                    rs.close();
+
+                    c.getPlayer().getMap().removeNpc(npcId);
+                    npc.setPosition(c.getPlayer().getPosition());
+                    npc.setCy(c.getPlayer().getPosition().y);
+                    npc.setRx0(c.getPlayer().getPosition().x + 50);
+                    npc.setRx1(c.getPlayer().getPosition().x - 50);
+                    npc.setFh(c.getPlayer().getMap().getFootholds().findBelow(c.getPlayer().getPosition()).getId());
+                    npc.setCustom(true);
+                    c.getPlayer().getMap().addMapObject(npc);
+                    c.getPlayer().getMap().broadcastMessage(MaplePacketCreator.spawnNPC(npc, true));
+                } else {
+                    c.getPlayer().dropMessage(5, "WZ에 존재하지 않는 NPC를 입력했습니다.");
+                    return 0;
+                }
+
+                ps = con.prepareStatement("UPDATE spawnnpc SET rx0 = ?, rx1 = ?, cy = ?, fh = ? WHERE mapid = ? && npcid = ?");
+                ps.setInt(1, c.getPlayer().getPosition().x - 50);
+                ps.setInt(2, c.getPlayer().getPosition().x + 50);
+                ps.setInt(3, c.getPlayer().getPosition().y);
+                ps.setInt(4, c.getPlayer().getMap().getFootholds().findBelow(c.getPlayer().getPosition()).getId());
+                ps.setInt(5, c.getPlayer().getMapId());
+                ps.setInt(6, npcId);
+                ps.executeUpdate();
+                ps.close();
+                con.close();
+                c.getPlayer().dropMessage(6, "고정 엔피시 좌표를 조정했습니다.");
+            } catch (Exception e) {
+                System.err.println("fix npc adjust error.");
+                e.printStackTrace();
+            } finally {
+                try {
+                    if (con != null) {
+                        con.close();
+                    }
+                    if (ps != null) {
+                        ps.close();
+                    }
+                    if (rs != null) {
+                        rs.close();
+                    }
+                } catch (Exception e) {
+                }
+            }
+            return 1;
+        }
+    }
+
     public static class MakePNPC extends CommandExecute {
 
         @Override

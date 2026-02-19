@@ -444,7 +444,7 @@ public final class MapleMap {
         int mobpos = mob.getTruePosition().x,
                 xPosPlus = 12,
                 smesorate = RateManager.MESO,
-                sdroprate = RateManager.DROP,
+                sdroprate = RateManager.getTrueDropRate(),
                 scashrate = RateManager.CASH;
         if (mob.getStats().isExplosiveReward()) {
             xPosPlus = 18;
@@ -499,6 +499,12 @@ public final class MapleMap {
             drop_rate = true;
             drop_rate_value = chr.getBuffedValue(MapleBuffStat.DROP_RATE);
         }
+        final double showdownRate = 1.0D + (showdown / 100.0D);
+        final double dropRateBuff = drop_rate ? drop_rate_value / 100.0D : 1.0D;
+        final double potentialDropRate = 1.0D + (chr.getStat().incRewardProp / 100.0D);
+        final double baseDropMultiplier = Math.max(1.0D, sdroprate);
+        final double totalItemDropMultiplier = Math.max(baseDropMultiplier, sdroprate * showdownRate * dropRateBuff * potentialDropRate);
+        final double mesoDropMultiplier = Math.max(baseDropMultiplier, sdroprate * showdownRate * dropRateBuff);
 
         for (final MonsterDropEntry de : dropEntry) {
             if (de.itemId == mob.getStolen()) {
@@ -514,20 +520,10 @@ public final class MapleMap {
             } else {
                 MDrate = 1.0;
             }
-            double multiplier = 0.00;
-            multiplier = sdroprate;
-            if (showdown != 0) {
-                multiplier += showdown / 100;
-            }
-            if (drop_rate) {
-                multiplier += (drop_rate_value - 100) / 100;
-            }
-            int chance = (int) (de.chance * multiplier);
+            final double multiplier = de.itemId == 0 ? mesoDropMultiplier : totalItemDropMultiplier;
+            long chance = Math.round(de.chance * multiplier);
             if (de.itemId == 0) {
-                chance *= MDrate;
-            }
-            if (drop_rate) {
-                multiplier += (drop_rate_value - 100) / 100;
+                chance = Math.round(chance * MDrate);
             }
             if (Randomizer.rand(0, 999999) < chance) {
                 pos.x = mobpos + (nIdx % 2 == 0 ? (xPosPlus * nIdx) : -(xPosPlus * (nIdx - 1)));
@@ -558,9 +554,10 @@ public final class MapleMap {
         Collections.shuffle(globalEntry);
         final int cashz = (int) ((mob.getStats().isBoss() && mob.getStats().getHPDisplayType() == 0 ? 20 : 1) * scashrate);
         final int cashModifier = (int) ((mob.getStats().isBoss() ? (mob.getStats().isPartyBonus() ? (mob.getMobExp() / 1000) : 0) : (mob.getMobExp() / 1000 + mob.getMobMaxHp() / 20000))); //no rate
+        final boolean globalDropBlockedMob = mob.getId() == 3400004 || mob.getId() == 3400006 || mob.getId() == 9410009 || mob.getId() == 9410011;
 
         // Global Drops
-        if (chr.getEventInstance() == null) {
+        if (!globalDropBlockedMob && chr.getEventInstance() == null) {
             globalEntry.add(new MonsterGlobalDropEntry(4030012, 1000, -1, (byte) 0, 1, 1, 0)); //몬스터 카드
             globalEntry.add(new MonsterGlobalDropEntry(2439990, 7500, -1, (byte) 0, 1, 1, 0)); //미라클 큐브
             globalEntry.add(new MonsterGlobalDropEntry(4039999, 50000, -1, (byte) 0, 1, 5, 0)); //넥슨캐시 100원
@@ -590,7 +587,8 @@ public final class MapleMap {
             globalEntry.add(new MonsterGlobalDropEntry(2439989, 1, -1, (byte) 0, 1, 1, 0)); // 50000 후캐
         }
 
-        for (final MonsterGlobalDropEntry de : globalEntry) {
+        if (!globalDropBlockedMob) {
+            for (final MonsterGlobalDropEntry de : globalEntry) {
             if (de.questid > 0) {
                 if ((de.continent < 0 || (de.continent < 10 && mapid / 100000000 == de.continent) || (de.continent < 100 && mapid / 10000000 == de.continent) || (de.continent < 1000 && mapid / 1000000 == de.continent))) {
                     questEntry.add(new MonsterDropEntry(mob.getId(), de.itemId, de.chance, de.Minimum, de.Maximum, de.questid));
@@ -612,7 +610,7 @@ public final class MapleMap {
                 chance = (int) Math.max(0, Math.min(999999, Math.round(dyn)));
             }
 
-            if (Randomizer.nextInt(999999) < (long) chance * sdroprate && (de.continent < 0 || (de.continent < 10 && mapid / 100000000 == de.continent) || (de.continent < 100 && mapid / 10000000 == de.continent) || (de.continent < 1000 && mapid / 1000000 == de.continent))) {
+            if (Randomizer.nextInt(999999) < (long) (chance * totalItemDropMultiplier) && (de.continent < 0 || (de.continent < 10 && mapid / 100000000 == de.continent) || (de.continent < 100 && mapid / 10000000 == de.continent) || (de.continent < 1000 && mapid / 1000000 == de.continent))) {
                 pos.x = mobpos + (nIdx % 2 == 0 ? (xPosPlus * nIdx) : -(xPosPlus * (nIdx - 1)));
                 if (de.itemId == 0) {
                     //chr.modifyCSPoints(1, (int) ((Randomizer.nextInt(cashz) + cashz + cashModifier) * (chr.getStat().cashBuff / 100.0) * chr.getCashMod()), true);
@@ -650,9 +648,10 @@ public final class MapleMap {
                     }
                 }
             }
+            }
         }
         for (final MonsterDropEntry de : questEntry) {
-            if (Randomizer.nextInt(999999) < de.chance * sdroprate) {
+            if (Randomizer.nextInt(999999) < (long) (de.chance * totalItemDropMultiplier)) {
                 if (de.itemId == 4310004) {
                     if (mob.getStats().getLevel() < 71) {
                         continue;
@@ -3416,8 +3415,8 @@ public final class MapleMap {
                 mobRate = 0.8;
             } else if (getId() >= 801000000 && getId() <= 801050000) { //쇼와 지역 너프
                 mobRate = 0.5;
-            } else if (getId() >= 211060000 && getId() <= 211060900) { //사자왕의 성 지역 버프
-                mobRate = 1.7;
+            } else if (getId() >= 211060000 && getId() <= 211060900) { //사자왕의 성 지역 너프
+                mobRate = 1.1;
             } else if (getId() >= 803000101 && getId() <= 803000104) { //크림슨우드 산맥 동굴 지역 버프
                 mobRate = 1.8;
             } else if (getId() >= 803000300 && getId() <= 803000310) { //크림슨우드 산맥 협곡 지역 버프

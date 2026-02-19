@@ -1732,6 +1732,8 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
         final List<MonsterDropEntry> ranks = MapleMonsterInformationProvider.getInstance().retrieveDrop(mobId);
         if (ranks != null && ranks.size() > 0) {
             int num = 0, itemId = 0, ch = 0;
+            final double personalItemDropMultiplier = RateManager.getTrueDropRate() * (1.0D + (getPlayer().getStat().incRewardProp / 100.0D));
+            final double personalMesoDropMultiplier = RateManager.getTrueDropRate();
             MonsterDropEntry de;
             StringBuilder name = new StringBuilder();
             for (int i = 0; i < ranks.size(); i++) {
@@ -1747,7 +1749,7 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
                         itemId = 4031041; //display sack of cash
                         namez = (de.Minimum * RateManager.DISPLAY_MESO) + "~" + (de.Maximum * RateManager.DISPLAY_MESO) + " 메소";
                     }
-                    ch = de.chance * RateManager.getTrueDropRate();
+                    ch = (int) Math.round(de.chance * (de.itemId == 0 ? personalMesoDropMultiplier : personalItemDropMultiplier));
                     name.append("#L" + itemId + "#" + (num + 1) + ") #v" + itemId + "#" + namez + " - " + (Integer.valueOf(ch >= 999999 ? 1000000 : ch).doubleValue() / 10000.0) + "%" + (de.questid > 0 && MapleQuest.getInstance(de.questid).getName().length() > 0 ? ("퀘스트 : " + MapleQuest.getInstance(de.questid).getName() + "") : "") + "\r\n");
                     num++;
                 }

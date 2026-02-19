@@ -2014,6 +2014,10 @@ public class PlayerStats implements Serializable {
         mpconReduce += pot.mpconReduce;
         incMesoProp += pot.incMesoProp;
         incRewardProp += pot.incRewardProp;
+        if (pot.potentialID == 20656 || pot.potentialID == 30656) {
+            // Force these custom potential lines to contribute exactly +10% item drop each.
+            incRewardProp += (10 - pot.incRewardProp);
+        }
         if (pot.DAMreflect > 0) {
             DAMreflect += pot.DAMreflect;
             DAMreflect_rate += pot.prop;

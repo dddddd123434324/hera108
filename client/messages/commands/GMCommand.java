@@ -15,6 +15,7 @@ import provider.MapleDataProvider;
 import provider.MapleDataProviderFactory;
 import provider.MapleDataTool;
 import server.MapleStatEffect;
+import server.DatabaseBackupManager;
 import server.life.MapleLifeFactory;
 import server.life.MapleMonster;
 import tools.FileoutputUtil;
@@ -877,6 +878,20 @@ public class GMCommand {
 
             c.getPlayer().dropMessage(6, "스킬 정보 덤프 완료. 파일: " + outFile + " (총 " + totalSkills + "개)");
             return 1;
+        }
+    }
+
+    public static class 쿼리백업 extends CommandExecute {
+
+        @Override
+        public int execute(final MapleClient c, final String[] splitted) {
+            if (c.getPlayer() == null) {
+                return 0;
+            }
+            final String requestBy = c.getPlayer().getName();
+            final DatabaseBackupManager.BackupResult result = DatabaseBackupManager.getInstance().backupNow("GM:" + requestBy);
+            c.getPlayer().dropMessage(6, result.getMessage());
+            return result.isSuccess() ? 1 : 0;
         }
     }
 }
