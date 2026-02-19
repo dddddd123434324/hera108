@@ -444,7 +444,7 @@ public final class MapleMap {
         int mobpos = mob.getTruePosition().x,
                 xPosPlus = 12,
                 smesorate = RateManager.MESO,
-                sdroprate = RateManager.DROP,
+                sdroprate = RateManager.getTrueDropRate(),
                 scashrate = RateManager.CASH;
         if (mob.getStats().isExplosiveReward()) {
             xPosPlus = 18;
@@ -499,6 +499,12 @@ public final class MapleMap {
             drop_rate = true;
             drop_rate_value = chr.getBuffedValue(MapleBuffStat.DROP_RATE);
         }
+        final double showdownRate = 1.0D + (showdown / 100.0D);
+        final double dropRateBuff = drop_rate ? drop_rate_value / 100.0D : 1.0D;
+        final double potentialDropRate = 1.0D + (chr.getStat().incRewardProp / 100.0D);
+        final double baseDropMultiplier = Math.max(1.0D, sdroprate);
+        final double totalItemDropMultiplier = Math.max(baseDropMultiplier, sdroprate * showdownRate * dropRateBuff * potentialDropRate);
+        final double mesoDropMultiplier = Math.max(baseDropMultiplier, sdroprate * showdownRate * dropRateBuff);
 
         for (final MonsterDropEntry de : dropEntry) {
             if (de.itemId == mob.getStolen()) {
@@ -514,20 +520,10 @@ public final class MapleMap {
             } else {
                 MDrate = 1.0;
             }
-            double multiplier = 0.00;
-            multiplier = sdroprate;
-            if (showdown != 0) {
-                multiplier += showdown / 100;
-            }
-            if (drop_rate) {
-                multiplier += (drop_rate_value - 100) / 100;
-            }
-            int chance = (int) (de.chance * multiplier);
+            final double multiplier = de.itemId == 0 ? mesoDropMultiplier : totalItemDropMultiplier;
+            long chance = Math.round(de.chance * multiplier);
             if (de.itemId == 0) {
-                chance *= MDrate;
-            }
-            if (drop_rate) {
-                multiplier += (drop_rate_value - 100) / 100;
+                chance = Math.round(chance * MDrate);
             }
             if (Randomizer.rand(0, 999999) < chance) {
                 pos.x = mobpos + (nIdx % 2 == 0 ? (xPosPlus * nIdx) : -(xPosPlus * (nIdx - 1)));
@@ -609,7 +605,7 @@ public final class MapleMap {
                 chance = (int) Math.max(0, Math.min(999999, Math.round(dyn)));
             }
 
-            if (Randomizer.nextInt(999999) < (long) chance * sdroprate && (de.continent < 0 || (de.continent < 10 && mapid / 100000000 == de.continent) || (de.continent < 100 && mapid / 10000000 == de.continent) || (de.continent < 1000 && mapid / 1000000 == de.continent))) {
+            if (Randomizer.nextInt(999999) < (long) (chance * totalItemDropMultiplier) && (de.continent < 0 || (de.continent < 10 && mapid / 100000000 == de.continent) || (de.continent < 100 && mapid / 10000000 == de.continent) || (de.continent < 1000 && mapid / 1000000 == de.continent))) {
                 pos.x = mobpos + (nIdx % 2 == 0 ? (xPosPlus * nIdx) : -(xPosPlus * (nIdx - 1)));
                 if (de.itemId == 0) {
                     //chr.modifyCSPoints(1, (int) ((Randomizer.nextInt(cashz) + cashz + cashModifier) * (chr.getStat().cashBuff / 100.0) * chr.getCashMod()), true);
@@ -649,7 +645,7 @@ public final class MapleMap {
             }
         }
         for (final MonsterDropEntry de : questEntry) {
-            if (Randomizer.nextInt(999999) < de.chance * sdroprate) {
+            if (Randomizer.nextInt(999999) < (long) (de.chance * totalItemDropMultiplier)) {
                 if (de.itemId == 4310004) {
                     if (mob.getStats().getLevel() < 71) {
                         continue;

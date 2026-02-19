@@ -128,6 +128,9 @@ public class Start {
             Logger.getLogger(Start.class.getName()).log(Level.SEVERE, null, ex);
         }
 
+        // Initializes rotating burning hunting fields (period is configured in BurningHuntingFieldManager.REFRESH_INTERVAL_MILLIS).
+        BurningHuntingFieldManager.init();
+
         System.out.println("[Loading Login]");
         try {
             LoginServer.run_startup_configurations();
@@ -189,6 +192,18 @@ public class Start {
             schedulewait += 86400000L;
         }
         Timer.WorldTimer.getInstance().register(MapleCharacter::initDailyQuestBonus, schedulewait);
+        
+        Calendar goldrichquestCal = Calendar.getInstance();
+        goldrichquestCal.set(Calendar.HOUR_OF_DAY, 0);
+        goldrichquestCal.set(Calendar.MINUTE, 0);
+        goldrichquestCal.set(Calendar.SECOND, 0);
+        goldrichquestCal.set(Calendar.MILLISECOND, 0);
+        if (goldrichquestCal.getTimeInMillis() <= System.currentTimeMillis()) {
+            goldrichquestCal.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        long goldrichquestMidnightDelay = goldrichquestCal.getTimeInMillis() - System.currentTimeMillis();
+        Timer.WorldTimer.getInstance().register(MapleQuest::resetGoldrichquestDailyLimit, 86400000L, goldrichquestMidnightDelay);
+
         Timer.WorldTimer.getInstance().register(RankingWorker::run, 30 * 60 * 1000L);
         new MemoryUsageWatcher(88).start();
         new DeadLockDetector(60, DeadLockDetector.RESTART).start();

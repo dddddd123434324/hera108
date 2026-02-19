@@ -90,7 +90,7 @@ public class InterServerHandler {
         //PC방
         if (c.burning) {
             chr.dropMessage(-1, "현재 메소 배율: " + RateManager.MESO);
-            chr.dropMessage(-1, "현재 드롭 배율: " + RateManager.DROP);
+            chr.dropMessage(-1, "현재 드롭 배율: " + RateManager.getTrueDropRate());
             chr.dropMessage(-1, "현재 추가 경험치 배율: " + RateManager.BURNING);
             chr.dropMessage(-1, "현재 버닝이 진행중 입니다.");
         }
@@ -393,7 +393,7 @@ public class InterServerHandler {
         }
         if (c.burning) {
             player.dropMessage(-1, "현재 메소 배율: " + RateManager.MESO);
-            player.dropMessage(-1, "현재 드롭 배율: " + RateManager.DROP);
+            player.dropMessage(-1, "현재 드롭 배율: " + RateManager.getTrueDropRate());
             player.dropMessage(-1, "현재 추가 경험치 배율: " + RateManager.BURNING);
             player.dropMessage(-1, "현재 버닝이 진행중 입니다.");
         }

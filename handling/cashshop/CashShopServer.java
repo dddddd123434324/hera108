@@ -28,7 +28,7 @@ import java.net.ServerSocket;
 public class CashShopServer {
 
     private static String ip;
-    private final static int PORT = 8888;
+    private static final int PORT = Integer.parseInt(ServerProperties.getProperty("cashshopPort", "8888"));
     private static PlayerStorage players;
     private static boolean finishedShutdown = false;
     private static CashShopServerThread thread;

@@ -410,15 +410,31 @@ public class SummonHandler {
                     Map<MapleBuffStat, Integer> localstatups = new EnumMap<MapleBuffStat, Integer>(MapleBuffStat.class);
 
                     if (buffid == 2022125) {
-                        localstatups.put(MapleBuffStat.ENHANCED_WDEF, (int) healEffect.getEnhancedWdef());
+                        final int wdefBuff = Math.max(healEffect.getEnhancedWdef(), healEffect.getWdef());
+                        if (wdefBuff > 0) {
+                            localstatups.put(MapleBuffStat.ENHANCED_WDEF, wdefBuff);
+                        }
                     } else if (buffid == 2022126) {
-                        localstatups.put(MapleBuffStat.ENHANCED_MDEF, (int) healEffect.getEnhancedMdef());
+                        final int mdefBuff = Math.max(healEffect.getEnhancedMdef(), healEffect.getMdef());
+                        if (mdefBuff > 0) {
+                            localstatups.put(MapleBuffStat.ENHANCED_MDEF, mdefBuff);
+                        }
                     } else if (buffid == 2022127) {
-                        localstatups.put(MapleBuffStat.ACC, (int) healEffect.getAcc());
+                        if (healEffect.getAcc() > 0) {
+                            localstatups.put(MapleBuffStat.ACC, (int) healEffect.getAcc());
+                        }
                     } else if (buffid == 2022128) {
-                        localstatups.put(MapleBuffStat.AVOID, (int) healEffect.getAvoid());
+                        if (healEffect.getAvoid() > 0) {
+                            localstatups.put(MapleBuffStat.AVOID, (int) healEffect.getAvoid());
+                        }
                     } else if (buffid == 2022129) {
-                        localstatups.put(MapleBuffStat.ENHANCED_WATK, (int) healEffect.getEnhancedWatk());
+                        final int watkBuff = Math.max(healEffect.getEnhancedWatk(), healEffect.getWatk());
+                        if (watkBuff > 0) {
+                            localstatups.put(MapleBuffStat.ENHANCED_WATK, watkBuff);
+                        }
+                    }
+                    if (localstatups.isEmpty()) {
+                        return;
                     }
                     //chr.cancelEffect(stateff, -1, localstatups, true);
                     chr.getClient().getSession().write(TemporaryStatsPacket.giveBuff(buffid, healEffect.getDuration(), localstatups, stateff));

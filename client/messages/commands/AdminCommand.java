@@ -2998,8 +2998,8 @@ public class AdminCommand {
         public int execute(MapleClient c, String[] splitted) {
             if (splitted.length > 1) {
                 final int rate = Integer.parseInt(splitted[1]);
-                RateManager.DROP = rate;
-                c.getPlayer().dropMessage(6, "드롭 배율을 " + rate + "배로 변경했습니다.");
+                RateManager.TRUEDROP = rate;
+                c.getPlayer().dropMessage(6, "드롭 배율을 " + RateManager.getTrueDropRate() + "배로 변경했습니다.");
             } else {
                 c.getPlayer().dropMessage(6, "사용법 : !드롭배율 <숫자>");
             }
@@ -3020,8 +3020,8 @@ public class AdminCommand {
                         return 0;
                     }
 
-                    server.RateManager.TRUEEXP = rate;
-                    c.getPlayer().dropMessage(6, "추가 경험치 배율을 " + rate + "배로 변경했습니다. (레벨구간 배율에 곱해집니다)");
+                    server.RateManager.EXP = rate;
+                    c.getPlayer().dropMessage(6, "경험치 배율을 " + rate + "배로 변경했습니다.");
                     return 1;
 
                 } catch (NumberFormatException e) {

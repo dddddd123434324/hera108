@@ -4617,10 +4617,10 @@ public class InventoryHandler {
 
     /*
      [R] C4 00 9B 1B 00 00 00
-     ��...
+     퀘스트 포트 열기(타입 0)
      
      [R] C4 00 9B 1B 00 00 01
-     ��...
+     퀘스트 포트 열기(타입 1)
      
      [R] C3 00 9B 1B 
      
@@ -4643,7 +4643,7 @@ public class InventoryHandler {
 
     /*
      [R] C5 00 03 00 F8 85 3D 00 9B 1B 00 00 64 00 00 00
-     �..�=.�..d...
+     퀘스트 포트 먹이 주기
      */
     public static void QuestPotFeed(LittleEndianAccessor slea, MapleClient c) {
         short slot = slea.readShort();

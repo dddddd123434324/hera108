@@ -8,9 +8,15 @@ import client.Skill;
 import client.SkillFactory;
 import constants.ServerConstants.PlayerGMRank;
 import provider.MapleData;
+import provider.MapleDataDirectoryEntry;
+import provider.MapleDataEntry;
+import provider.MapleDataFileEntry;
+import provider.MapleDataProvider;
 import provider.MapleDataProviderFactory;
 import provider.MapleDataTool;
 import server.MapleStatEffect;
+import server.life.MapleLifeFactory;
+import server.life.MapleMonster;
 import tools.FileoutputUtil;
 import tools.StringUtil;
 
@@ -29,6 +35,360 @@ public class GMCommand {
 
     public static PlayerGMRank getPlayerLevelRequired() {
         return PlayerGMRank.GM;
+    }
+
+    private static int parseIntSafe(final String text, final int def) {
+        try {
+            return Integer.parseInt(text);
+        } catch (Throwable ignore) {
+            return def;
+        }
+    }
+
+    private static final int LEVEL_GROUP_MIN = 1;
+    private static final int LEVEL_GROUP_MAX = 250;
+    private static final int LEVEL_GROUP_STEP = 10;
+
+    private static final class MapAverageLevelResult {
+
+        private final double averageLevel;
+        private final int roundedAverageLevel;
+        private final int sampledMobCount;
+
+        private MapAverageLevelResult(final double averageLevel, final int roundedAverageLevel, final int sampledMobCount) {
+            this.averageLevel = averageLevel;
+            this.roundedAverageLevel = roundedAverageLevel;
+            this.sampledMobCount = sampledMobCount;
+        }
+    }
+
+    private static final class MobMapLevelEntry {
+
+        private final int mapId;
+        private final String mapName;
+        private final double averageLevel;
+        private final int roundedAverageLevel;
+        private final int sampledMobCount;
+
+        private MobMapLevelEntry(final int mapId, final String mapName,
+                                 final double averageLevel, final int roundedAverageLevel, final int sampledMobCount) {
+            this.mapId = mapId;
+            this.mapName = mapName;
+            this.averageLevel = averageLevel;
+            this.roundedAverageLevel = roundedAverageLevel;
+            this.sampledMobCount = sampledMobCount;
+        }
+    }
+
+    private static int getMobLevelCached(final int mobId, final Map<Integer, Integer> mobLevelCache) {
+        Integer level = mobLevelCache.get(Integer.valueOf(mobId));
+        if (level != null) {
+            return level.intValue();
+        }
+
+        int resolvedLevel = -1;
+        final MapleMonster monster = MapleLifeFactory.getMonster(mobId);
+        if (monster != null && monster.getStats() != null) {
+            resolvedLevel = monster.getStats().getLevel();
+        }
+        mobLevelCache.put(Integer.valueOf(mobId), Integer.valueOf(resolvedLevel));
+        return resolvedLevel;
+    }
+
+    private static MapAverageLevelResult computeMapAverageLevel(final MapleData mapData, final Map<Integer, Integer> mobLevelCache) {
+        if (mapData == null) {
+            return null;
+        }
+
+        final MapleData lifeData = mapData.getChildByPath("life");
+        if (lifeData == null) {
+            return null;
+        }
+
+        long levelSum = 0L;
+        int sampledMobCount = 0;
+
+        for (MapleData life : lifeData) {
+            if (!"m".equals(MapleDataTool.getString("type", life, ""))) {
+                continue;
+            }
+
+            final int mobId = parseIntSafe(MapleDataTool.getString("id", life, ""), -1);
+            if (mobId < 0) {
+                continue;
+            }
+
+            final int mobLevel = getMobLevelCached(mobId, mobLevelCache);
+            if (mobLevel <= 0) {
+                continue;
+            }
+
+            levelSum += mobLevel;
+            sampledMobCount++;
+        }
+
+        if (sampledMobCount <= 0) {
+            return null;
+        }
+
+        final double averageLevel = (double) levelSum / (double) sampledMobCount;
+        final int roundedAverageLevel = (int) Math.round(averageLevel);
+        return new MapAverageLevelResult(averageLevel, roundedAverageLevel, sampledMobCount);
+    }
+
+    private static int getLevelBucketStart(final int roundedAverageLevel) {
+        if (roundedAverageLevel < LEVEL_GROUP_MIN || roundedAverageLevel > LEVEL_GROUP_MAX) {
+            return -1;
+        }
+        return ((roundedAverageLevel - 1) / LEVEL_GROUP_STEP) * LEVEL_GROUP_STEP + 1;
+    }
+
+    private static MapleData resolveLinkedMapData(final MapleDataProvider mapProvider, MapleData mapData) {
+        if (mapProvider == null || mapData == null) {
+            return mapData;
+        }
+
+        final Set<Integer> visited = new HashSet<Integer>();
+        while (mapData != null) {
+            final MapleData linkData = mapData.getChildByPath("info/link");
+            if (linkData == null) {
+                return mapData;
+            }
+
+            final int linkedMapId = MapleDataTool.getIntConvert(linkData, -1);
+            if (linkedMapId < 0 || !visited.add(Integer.valueOf(linkedMapId))) {
+                return mapData;
+            }
+
+            final String linkedMapPath = "Map/Map" + (linkedMapId / 100000000) + "/"
+                    + StringUtil.getLeftPaddedStr(String.valueOf(linkedMapId), '0', 9) + ".img";
+            try {
+                mapData = mapProvider.getData(linkedMapPath);
+            } catch (RuntimeException ignore) {
+                return mapData;
+            }
+        }
+        return null;
+    }
+
+    private static Map<Integer, String> buildMapNameLookup(final MapleData mapStringData) {
+        final Map<Integer, String> result = new HashMap<Integer, String>();
+        if (mapStringData == null) {
+            return result;
+        }
+
+        for (MapleData mapAreaData : mapStringData.getChildren()) {
+            for (MapleData mapIdData : mapAreaData.getChildren()) {
+                final int mapId = parseIntSafe(mapIdData.getName(), -1);
+                if (mapId < 0) {
+                    continue;
+                }
+
+                final String streetName = MapleDataTool.getString(mapIdData.getChildByPath("streetName"), "");
+                final String mapName = MapleDataTool.getString(mapIdData.getChildByPath("mapName"), "");
+                final String displayName;
+                if (!streetName.isEmpty() && !mapName.isEmpty()) {
+                    displayName = streetName + " - " + mapName;
+                } else if (!mapName.isEmpty()) {
+                    displayName = mapName;
+                } else if (!streetName.isEmpty()) {
+                    displayName = streetName;
+                } else {
+                    displayName = "NO-NAME";
+                }
+                result.put(Integer.valueOf(mapId), displayName);
+            }
+        }
+
+        return result;
+    }
+
+    public static class MobMapLog extends CommandExecute {
+
+        @Override
+        public int execute(final MapleClient c, final String[] splitted) {
+            final String wzPath = System.getProperty("net.sf.odinms.wzpath", "wz");
+            final File mapWz = new File(wzPath + "/Map.wz");
+            final File stringWz = new File(wzPath + "/String.wz");
+
+            if (!mapWz.exists() || !mapWz.isDirectory()) {
+                c.getPlayer().dropMessage(6, "[mobmaplog] Map.wz path not found: " + mapWz.getPath());
+                return 0;
+            }
+            if (!stringWz.exists() || !stringWz.isDirectory()) {
+                c.getPlayer().dropMessage(6, "[mobmaplog] String.wz path not found: " + stringWz.getPath());
+                return 0;
+            }
+
+            final MapleDataProvider mapProvider = MapleDataProviderFactory.getDataProvider(mapWz);
+            final MapleDataProvider stringProvider = MapleDataProviderFactory.getDataProvider(stringWz);
+            final MapleData mapStringData;
+            try {
+                mapStringData = stringProvider.getData("Map.img");
+            } catch (RuntimeException ex) {
+                c.getPlayer().dropMessage(6, "[mobmaplog] Failed to load String.wz/Map.img");
+                FileoutputUtil.outputFileError(FileoutputUtil.CommandEx_Log, ex);
+                return 0;
+            }
+            final Map<Integer, String> mapNameLookup = buildMapNameLookup(mapStringData);
+
+            final MapleDataEntry mapEntry = mapProvider.getRoot().getEntry("Map");
+            if (!(mapEntry instanceof MapleDataDirectoryEntry)) {
+                c.getPlayer().dropMessage(6, "[mobmaplog] Map.wz/Map directory not found.");
+                return 0;
+            }
+            final MapleDataDirectoryEntry mapDir = (MapleDataDirectoryEntry) mapEntry;
+
+            final Map<Integer, Map<Integer, List<MobMapLevelEntry>>> groupedByLevel = new TreeMap<Integer, Map<Integer, List<MobMapLevelEntry>>>();
+            final Map<Integer, Integer> mobLevelCache = new HashMap<Integer, Integer>();
+            int scannedMapCount = 0;
+            int loadFailCount = 0;
+            int mobMapCount = 0;
+            int noNameSkippedCount = 0;
+            int outOfRangeSkippedCount = 0;
+            int noLevelDataSkippedCount = 0;
+            int groupedMapCount = 0;
+
+            for (MapleDataDirectoryEntry mapCategoryDir : mapDir.getSubdirectories()) {
+                final String categoryName = mapCategoryDir.getName();
+                if (categoryName == null || !categoryName.startsWith("Map")) {
+                    continue;
+                }
+
+                for (MapleDataFileEntry mapFile : mapCategoryDir.getFiles()) {
+                    final String fileName = mapFile.getName();
+                    if (fileName == null || !fileName.endsWith(".img")) {
+                        continue;
+                    }
+
+                    final int mapId = parseIntSafe(fileName.substring(0, fileName.length() - 4), -1);
+                    if (mapId < 0) {
+                        continue;
+                    }
+                    scannedMapCount++;
+
+                    final String mapPath = "Map/" + categoryName + "/" + fileName;
+                    MapleData mapData;
+                    try {
+                        mapData = mapProvider.getData(mapPath);
+                    } catch (RuntimeException ex) {
+                        loadFailCount++;
+                        continue;
+                    }
+
+                    mapData = resolveLinkedMapData(mapProvider, mapData);
+                    final MapAverageLevelResult averageLevel = computeMapAverageLevel(mapData, mobLevelCache);
+                    if (averageLevel == null) {
+                        noLevelDataSkippedCount++;
+                        continue;
+                    }
+                    mobMapCount++;
+
+                    String mapName = mapNameLookup.get(Integer.valueOf(mapId));
+                    if (mapName == null || mapName.isEmpty() || "NO-NAME".equals(mapName)) {
+                        noNameSkippedCount++;
+                        continue;
+                    }
+
+                    final int levelBucketStart = getLevelBucketStart(averageLevel.roundedAverageLevel);
+                    if (levelBucketStart < 0) {
+                        outOfRangeSkippedCount++;
+                        continue;
+                    }
+
+                    final int firstDigit = StringUtil.getLeftPaddedStr(String.valueOf(mapId), '0', 9).charAt(0) - '0';
+                    Map<Integer, List<MobMapLevelEntry>> byDigit = groupedByLevel.get(Integer.valueOf(levelBucketStart));
+                    if (byDigit == null) {
+                        byDigit = new TreeMap<Integer, List<MobMapLevelEntry>>();
+                        groupedByLevel.put(Integer.valueOf(levelBucketStart), byDigit);
+                    }
+                    List<MobMapLevelEntry> grouped = byDigit.get(Integer.valueOf(firstDigit));
+                    if (grouped == null) {
+                        grouped = new ArrayList<MobMapLevelEntry>();
+                        byDigit.put(Integer.valueOf(firstDigit), grouped);
+                    }
+                    grouped.add(new MobMapLevelEntry(
+                            mapId,
+                            mapName,
+                            averageLevel.averageLevel,
+                            averageLevel.roundedAverageLevel,
+                            averageLevel.sampledMobCount
+                    ));
+                    groupedMapCount++;
+                }
+            }
+
+            try {
+                File dir = new File("log");
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
+            } catch (Throwable ignore) {
+            }
+
+            final String ts = FileoutputUtil.CurrentReadable_Time().replace(":", "-").replace(" ", "_");
+            final String outFile = "log/MobMapByLevelThenFirstDigit_" + ts + ".txt";
+
+            try (Writer w = new OutputStreamWriter(new FileOutputStream(outFile, false), StandardCharsets.UTF_8)) {
+                w.write("=== WZ Mob Map List by Avg Level(1~250 step 10) then First Digit (" + FileoutputUtil.CurrentReadable_Time() + ") ===\n");
+                w.write("wzPath: " + wzPath + "\n");
+                w.write("scannedMaps: " + scannedMapCount
+                        + ", mobMaps: " + mobMapCount
+                        + ", groupedMaps: " + groupedMapCount
+                        + ", noNameSkipped: " + noNameSkippedCount
+                        + ", outOfRangeSkipped: " + outOfRangeSkippedCount
+                        + ", noLevelDataSkipped: " + noLevelDataSkippedCount
+                        + ", loadFails: " + loadFailCount + "\n\n");
+
+                for (int levelStart = LEVEL_GROUP_MIN; levelStart <= LEVEL_GROUP_MAX; levelStart += LEVEL_GROUP_STEP) {
+                    final int levelEnd = Math.min(levelStart + LEVEL_GROUP_STEP - 1, LEVEL_GROUP_MAX);
+                    final Map<Integer, List<MobMapLevelEntry>> byDigit = groupedByLevel.get(Integer.valueOf(levelStart));
+
+                    int bucketCount = 0;
+                    if (byDigit != null) {
+                        for (List<MobMapLevelEntry> entries : byDigit.values()) {
+                            bucketCount += entries.size();
+                        }
+                    }
+                    w.write("[" + levelStart + "-" + levelEnd + "] count=" + bucketCount + "\n");
+
+                    if (byDigit != null) {
+                        for (Map.Entry<Integer, List<MobMapLevelEntry>> digitEntry : byDigit.entrySet()) {
+                            final int firstDigit = digitEntry.getKey().intValue();
+                            final List<MobMapLevelEntry> entries = digitEntry.getValue();
+                            Collections.sort(entries, new Comparator<MobMapLevelEntry>() {
+                                @Override
+                                public int compare(final MobMapLevelEntry o1, final MobMapLevelEntry o2) {
+                                    return o1.mapId - o2.mapId;
+                                }
+                            });
+
+                            w.write("  <" + firstDigit + "> count=" + entries.size() + "\n");
+                            for (MobMapLevelEntry entry : entries) {
+                                w.write("  " + entry.mapId
+                                        + " | avg=" + String.format(Locale.US, "%.1f", entry.averageLevel)
+                                        + " (rounded=" + entry.roundedAverageLevel + ", mobs=" + entry.sampledMobCount + ")"
+                                        + " | " + entry.mapName + "\n");
+                            }
+                        }
+                    }
+
+                    w.write("\n");
+                }
+
+                w.write("=== END ===\n");
+            } catch (Exception ex) {
+                FileoutputUtil.outputFileError(FileoutputUtil.CommandEx_Log, ex);
+                c.getPlayer().dropMessage(6, "[mobmaplog] Failed to write log file.");
+                return 0;
+            }
+
+            c.getPlayer().dropMessage(6, "[mobmaplog] Completed. file=" + outFile + ", groupedMaps=" + groupedMapCount);
+            return 1;
+        }
+    }
+
+    public static class 몹맵로그 extends MobMapLog {
     }
 
     public static class 스킬정보 extends CommandExecute {

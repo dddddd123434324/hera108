@@ -41,6 +41,7 @@ import tools.MaplePacketCreator;
 import tools.StringUtil;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
@@ -214,16 +215,16 @@ public class NPCScriptTargetFunction {
                 if (owner != null) {
                     item.setOwner(owner);
                 }
-                item.setGMLog("획득자: " + cg.getPlayer().getName() + " 날짜: " + FileoutputUtil.CurrentReadable_Date() + " 코드:" + id + " 갯수: " + quantity + "by 스크립트");
+                item.setGMLog("?띾뱷?? " + cg.getPlayer().getName() + " ?좎쭨: " + FileoutputUtil.CurrentReadable_Date() + " 肄붾뱶:" + id + " 媛?닔: " + quantity + "by ?ㅽ겕由쏀듃");
                 final String name = ii.getName(id);
                 if (id / 10000 == 114 && name != null && name.length() > 0) { //medal
-                    final String msg = "<" + name + "> 칭호를 얻었습니다.";
+                    final String msg = "<" + name + "> 移?샇瑜??살뿀?듬땲??";
                     cg.getPlayer().dropMessage(-1, msg);
                     cg.getPlayer().dropMessage(5, msg);
                 }
                 MapleInventoryManipulator.addbyItem(cg, item.copy());
             } else {
-                MapleInventoryManipulator.addById(cg, id, quantity, owner == null ? "" : owner, null, period, "획득자: " + cg.getPlayer().getName() + " 날짜: " + FileoutputUtil.CurrentReadable_Date() + " 코드:" + id + " 갯수: " + quantity + "by 스크립트");
+                MapleInventoryManipulator.addById(cg, id, quantity, owner == null ? "" : owner, null, period, "?띾뱷?? " + cg.getPlayer().getName() + " ?좎쭨: " + FileoutputUtil.CurrentReadable_Date() + " 肄붾뱶:" + id + " 媛?닔: " + quantity + "by ?ㅽ겕由쏀듃");
             }
         } else {
             MapleInventoryManipulator.removeById(cg, GameConstants.getInventoryType(id), id, -quantity, true, false);
@@ -259,15 +260,15 @@ public class NPCScriptTargetFunction {
                 }
                 final String name = ii.getName(id);
                 if (id / 10000 == 114 && name != null && name.length() > 0) { //medal
-                    final String msg = "<" + name + "> 칭호를 얻었습니다.";
+                    final String msg = "<" + name + "> 移?샇瑜??살뿀?듬땲??";
                     cg.getPlayer().dropMessage(-1, msg);
                     cg.getPlayer().dropMessage(5, msg);
                 }
-                item.setGMLog("획득자: " + cg.getPlayer().getName() + " 날짜: " + FileoutputUtil.CurrentReadable_Date() + " 코드:" + id + " 갯수: " + quantity + "by 스크립트");
+                item.setGMLog("?띾뱷?? " + cg.getPlayer().getName() + " ?좎쭨: " + FileoutputUtil.CurrentReadable_Date() + " 肄붾뱶:" + id + " 媛?닔: " + quantity + "by ?ㅽ겕由쏀듃");
                 item.setUniqueId(MapleInventoryManipulator.getUniqueId(item.getItemId(), null));
                 MapleInventoryManipulator.addbyItem(cg, item.copy());
             } else {
-                MapleInventoryManipulator.addById(cg, id, quantity, "", null, period, "획득자: " + cg.getPlayer().getName() + " 날짜: " + FileoutputUtil.CurrentReadable_Date() + " 코드:" + id + " 갯수: " + quantity + "by 스크립트");
+                MapleInventoryManipulator.addById(cg, id, quantity, "", null, period, "?띾뱷?? " + cg.getPlayer().getName() + " ?좎쭨: " + FileoutputUtil.CurrentReadable_Date() + " 肄붾뱶:" + id + " 媛?닔: " + quantity + "by ?ㅽ겕由쏀듃");
             }
         } else {
             MapleInventoryManipulator.removeById(cg, GameConstants.getInventoryType(id), id, -quantity, true, false);
@@ -360,6 +361,77 @@ public class NPCScriptTargetFunction {
         }
     }
 
+    public final void openBurningHuntingFieldWarpMenu() {
+        if (vm.isStop()) {
+            return;
+        }
+        vm.flushSay();
+
+        final List<BurningHuntingFieldManager.BurningFieldGroup> groups = BurningHuntingFieldManager.getCurrentGroups();
+        if (groups == null || groups.isEmpty()) {
+            vm.addSay("현재 버닝 중인 사냥터가 없습니다. 잠시 후 다시 시도해 주세요.");
+            vm.flushSay();
+            return;
+        }
+
+        final StringBuilder menu = new StringBuilder();
+        final long nextRefreshTime = BurningHuntingFieldManager.getNextRefreshTime();
+        long remainMillis = nextRefreshTime - System.currentTimeMillis();
+        if (remainMillis < 0L) {
+            remainMillis = 0L;
+        }
+        final long remainTotalMinutes = (remainMillis + 59999L) / 60000L;
+        final long remainHours = remainTotalMinutes / 60L;
+        final long remainMinutes = remainTotalMinutes % 60L;
+
+        menu.append("그래, 버닝 사냥터를 찾고 있는 건가? 이동할 곳을 골라 주게.\r\n")
+                .append("버닝 사냥터는 3시간마다 바뀐다는 점을 유의하라고.\r\n")
+                .append("참고로, 버닝 사냥터가 바뀌기까지 #b")
+                .append(remainHours)
+                .append("시간#k #b")
+                .append(remainMinutes)
+                .append("분#k이 남았네.\r\n#b");
+
+        final List<Integer> selectedMapIds = new ArrayList<Integer>();
+        int menuIndex = 0;
+        for (BurningHuntingFieldManager.BurningFieldGroup group : groups) {
+            final List<BurningHuntingFieldManager.BurningFieldInfo> entries = group.getEntries();
+            if (entries == null || entries.isEmpty()) {
+                continue;
+            }
+
+            menu.append("\r\n\r\n#k")
+                    .append(group.getDisplayStartLevel())
+                    .append(" ~ ");
+            if (group.getDisplayEndLevel() > 0) {
+                menu.append(group.getDisplayEndLevel());
+            }
+            menu.append(" 버닝 사냥터");
+
+            for (BurningHuntingFieldManager.BurningFieldInfo entry : entries) {
+                menu.append("\r\n#L")
+                        .append(menuIndex++)
+                        .append("# #b<<")
+                        .append(entry.getMapName())
+                        .append(">> 레벨대 ")
+                        .append(entry.getRoundedAvgLevel())
+                        .append("#l#k");
+                selectedMapIds.add(Integer.valueOf(entry.getMapId()));
+            }
+        }
+
+        if (selectedMapIds.isEmpty()) {
+            vm.addSay("현재 버닝 중인 사냥터가 없습니다. 잠시 후 다시 시도해 주세요.");
+            vm.flushSay();
+            return;
+        }
+
+        final int selection = vm.askMenu(menu.toString());
+        if (selection >= 0 && selection < selectedMapIds.size()) {
+            warp(selectedMapIds.get(selection).intValue());
+        }
+    }
+
     public void showEffect(String effect) {
         getMap().broadcastMessage(MaplePacketCreator.showEffect(effect));
     }
@@ -425,7 +497,7 @@ public class NPCScriptTargetFunction {
             return;
         }
         vm.flushSay();
-        ServerLogger.getInstance().logItem(LogType.Item.FromScript, getPlayer().getId(), getPlayer().getName(), 0, 0, "메소", gain, "Script : VM - ");
+        ServerLogger.getInstance().logItem(LogType.Item.FromScript, getPlayer().getId(), getPlayer().getName(), 0, 0, "硫붿냼", gain, "Script : VM - ");
         getPlayer().gainMeso(gain, true, true);
     }
 
@@ -449,9 +521,12 @@ public class NPCScriptTargetFunction {
         if (args < 100) {
             player.setSkinColor((byte) args);
             player.updateSingleStat(MapleStat.SKIN, args);
-        } else if (args < 30000) {
+        } else if (isFaceAvatar(args)) {
             player.setFace(args);
             player.updateSingleStat(MapleStat.FACE, args);
+        } else if (isHairAvatar(args)) {
+            player.setHair(args);
+            player.updateSingleStat(MapleStat.HAIR, args);
         } else {
             player.setHair(args);
             player.updateSingleStat(MapleStat.HAIR, args);
@@ -547,7 +622,7 @@ public class NPCScriptTargetFunction {
         int channel = World.Find.findChannel(cid);
         if (channel >= 0) {
             World.Broadcast.sendPacket(cid, MaplePacketCreator.sendDuey((byte) 28, null, null));
-            World.Broadcast.sendPacket(cid, MaplePacketCreator.serverNotice(5, "아이템이 지급되었습니다. NPC 택배원 <듀이> 에게서 아이템을 수령하세요!"));
+            World.Broadcast.sendPacket(cid, MaplePacketCreator.serverNotice(5, "?꾩씠?쒖씠 吏湲됰릺?덉뒿?덈떎. NPC ?앸같??<??? ?먭쾶???꾩씠?쒖쓣 ?섎졊?섏꽭??"));
         }
         DueyHandler.addNewItemToDb(itemId, quantity, cid, sender, msg, channel >= 0);
     }
@@ -602,9 +677,9 @@ public class NPCScriptTargetFunction {
 
     public boolean hasPath(int avatar) {
         String path = ServerProperties.WZ_PATH + "/Character.wz/";
-        if (avatar >= 20000 && avatar < 30000 || avatar >= 50000 && avatar < 60000) {
+        if (isFaceAvatar(avatar)) {
             path += "Face/";
-        } else if (avatar >= 30000 && avatar < 50000 || avatar >= 60000) {
+        } else if (isHairAvatar(avatar)) {
             path += "Hair/";
         } else if (avatar < 100) {
             return true;
@@ -612,6 +687,14 @@ public class NPCScriptTargetFunction {
         path += "000" + avatar + ".img.xml";
         File f = new File(path);
         return f.exists();
+    }
+
+    private static boolean isFaceAvatar(int avatar) {
+        return (avatar >= 20000 && avatar < 30000) || (avatar >= 50000 && avatar < 60000);
+    }
+
+    private static boolean isHairAvatar(int avatar) {
+        return (avatar >= 30000 && avatar < 50000) || avatar >= 60000;
     }
 
     public void useSBCSkin() {
@@ -664,7 +747,7 @@ public class NPCScriptTargetFunction {
     }
 
     public void addInternetCafeTime(int minutes) {
-        long time = 60000 * minutes; //분 단위로 추가
+        long time = 60000 * minutes; //遺??⑥쐞濡?異붽?
         if (getPlayer().getPcTime() > System.currentTimeMillis()) {
             getPlayer().addPcTime((long) time);
         } else {

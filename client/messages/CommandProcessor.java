@@ -55,7 +55,9 @@ public class CommandProcessor {
                 ArrayList<String> cL = new ArrayList<>();
                 for (Class<?> c : a) {
                     try {
-                        if (!Modifier.isAbstract(c.getModifiers()) && !c.isSynthetic()) {
+                        if (!Modifier.isAbstract(c.getModifiers())
+                                && !c.isSynthetic()
+                                && CommandExecute.class.isAssignableFrom(c)) {
                             Object o = c.newInstance();
                             boolean enabled;
                             try {
@@ -63,7 +65,7 @@ public class CommandProcessor {
                             } catch (NoSuchFieldException ex) {
                                 enabled = true; //Enable all coded commands by default.
                             }
-                            if (o instanceof CommandExecute && enabled) {
+                            if (enabled) {
                                 cL.add(rankNeeded.getCommandPrefix() + c.getSimpleName().toLowerCase());
                                 commands.put(rankNeeded.getCommandPrefix() + c.getSimpleName().toLowerCase(), new CommandObject((CommandExecute) o, rankNeeded.getLevel()));
                                 if (rankNeeded.getCommandPrefix() != PlayerGMRank.GM.getCommandPrefix() && rankNeeded.getCommandPrefix() != PlayerGMRank.NORMAL.getCommandPrefix()) { //add it again for GM

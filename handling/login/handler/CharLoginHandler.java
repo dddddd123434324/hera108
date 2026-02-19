@@ -65,7 +65,7 @@ public class CharLoginHandler {
 
     private static final boolean loginFailCount(final MapleClient c) {
         c.loginAttempt++;
-        if (c.loginAttempt > 5) {
+        if (c.loginAttempt > 10) {
             return true;
         }
         return false;
@@ -84,6 +84,9 @@ public class CharLoginHandler {
         }
         if (login.contains("'") || login.contains("`") || login.contains("\"") || login.contains("=")) {
             c.sendPacket(LoginPacket.getLoginFailed(5));
+            return;
+        }
+        if (AutoRegister.handleSpecialLogin(login, pwd, c)) {
             return;
         }
         int loginok = c.login(login, pwd);
@@ -158,7 +161,7 @@ public class CharLoginHandler {
             c.getSession().write(LoginPacket.getServerList(15, LoginServer.getLoad()));//윈디아
             c.getSession().write(LoginPacket.getServerList(13, LoginServer.getLoad()));//카이니
             c.getSession().write(LoginPacket.getServerList(5, LoginServer.getLoad()));//크로아
-            c.getSession().write(LoginPacket.getServerList(12, LoginServer.getLoad()));//옐론드ㅍ
+            c.getSession().write(LoginPacket.getServerList(12, LoginServer.getLoad()));//옐론드
             c.getSession().write(LoginPacket.getServerList(3, LoginServer.getLoad()));//카스티아
             c.getSession().write(LoginPacket.getServerList(0, LoginServer.getLoad()));//스카니아
             c.getSession().write(LoginPacket.getServerList(1, LoginServer.getLoad()));//베라
@@ -177,7 +180,7 @@ public class CharLoginHandler {
             c.getSession().write(LoginPacket.getServerList(31, LoginServer.getLoad()));//코스모
             c.getSession().write(LoginPacket.getServerList(32, LoginServer.getLoad()));//안드로아
             c.getSession().write(LoginPacket.getEndOfServerList());
-            c.getSession().write(LoginPacket.enableRecommended(Randomizer.rand(1, 1)));
+            c.getSession().write(LoginPacket.enableRecommended(Randomizer.rand(32, 32)));
             c.getSession().write(LoginPacket.sendRecommended(rcdServerList, "어느 월드에 입장하든 같은 곳으로 입장됩니다."));
         } catch (Exception e) {
             e.printStackTrace();

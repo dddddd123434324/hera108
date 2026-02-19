@@ -53,7 +53,7 @@ public class GMHandler {
                         RateManager.EXP = value;
                         break;
                     case 2:
-                        RateManager.DROP = value;
+                        RateManager.TRUEDROP = value;
                         break;
                     case 3:
                         RateManager.MESO = value;

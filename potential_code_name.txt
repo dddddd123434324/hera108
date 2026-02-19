@@ -1,0 +1,127 @@
+﻿code	option_name	meta
+1	STR +1	
+2	DEX +1	
+3	INT +1	
+4	LUK +1	
+5	Max HP +5	
+6	Max MP +5	
+7	Accuracy +2	
+8	Avoidability +2	
+9	Speed +1	optionType=55
+10	Jump +1	optionType=55
+11	Weapon ATT +1	optionType=10
+12	Magic ATT +1	optionType=10
+13	Physical DEF +5	optionType=11
+14	Magic DEF +5	optionType=11
+901	Face Effect(angry), Proc Chance 10%, Duration 10 sec	optionType=51
+902	Face Effect(cheers), Proc Chance 10%, Duration 10 sec	optionType=51
+903	Face Effect(love), Proc Chance 10%, Duration 10 sec	optionType=51
+904	Face Effect(blaze), Proc Chance 10%, Duration 10 sec	optionType=51
+905	Face Effect(glitter), Proc Chance 10%, Duration 10 sec	optionType=51
+10001	STR +2	
+10002	DEX +2	
+10003	INT +2	
+10004	LUK +2	
+10005	Max HP +10	
+10006	Max MP +10	
+10007	Accuracy +4	
+10008	Avoidability +4	
+10009	Speed +2	optionType=55
+10010	Jump +2	optionType=55
+10011	Weapon ATT +2	optionType=10
+10012	Magic ATT +2	optionType=10
+10013	Physical DEF +10	optionType=11
+10014	Magic DEF +10	optionType=11
+10041	STR +1%	
+10042	DEX +1%	
+10043	INT +1%	
+10044	LUK +1%	
+10045	Max HP +1%	optionType=11
+10046	Max MP +1%	optionType=11
+10047	Accuracy +1%	
+10048	Avoidability +1%	
+10051	Weapon ATT +1%	optionType=10
+10052	Magic ATT +1%	optionType=10
+10053	Physical DEF +1%	optionType=11
+10054	Magic DEF +1%	optionType=11
+10055	Critical Rate +4%	optionType=10
+10070	Damage +1%	optionType=10
+10081	STR +1, DEX +1, INT +1, LUK +1	
+10151	Recover HP +2	optionType=40
+10156	Recover MP +2	optionType=40
+10201	Special HP Recovery +10, Proc Chance 3%	optionType=10
+10206	Special MP Recovery +10, Proc Chance 3%	optionType=10
+10221	On attack: Poison, Proc Chance 10%, Level Value 1	optionType=10, reqLevel=10
+10226	On attack: Stun, Proc Chance 5%, Level Value 1	optionType=10, reqLevel=10
+10231	On attack: Slow, Proc Chance 10%, Level Value 1	optionType=10, reqLevel=10
+10236	On attack: Blind, Proc Chance 10%, Level Value 1	optionType=10, reqLevel=10
+10241	On attack: Freeze, Proc Chance 5%, Level Value 1	optionType=10, reqLevel=10
+10246	On attack: Seal, Proc Chance 5%, Level Value 1	optionType=10, reqLevel=10
+10291	Ignore Enemy DEF +15%	optionType=10, reqLevel=30
+20041	STR +2%	
+20042	DEX +2%	
+20043	INT +2%	
+20044	LUK +2%	
+20045	Max HP +2%	optionType=11
+20046	Max MP +2%	optionType=11
+20047	Accuracy +2%	
+20048	Avoidability +2%	
+20051	Weapon ATT +2%	optionType=10
+20052	Magic ATT +2%	optionType=10
+20053	Physical DEF +2%	optionType=11
+20054	Magic DEF +2%	optionType=11
+20055	Critical Rate +8%	optionType=10
+20070	Damage +2%	optionType=10
+20086	STR +1%, DEX +1%, INT +1%, LUK +1%	
+20181	Recover HP +5, Recover MP +5	optionType=90, reqLevel=30
+20201	Special HP Recovery +20, Proc Chance 3%	optionType=10
+20206	Special MP Recovery +20, Proc Chance 3%	optionType=10
+20291	Ignore Enemy DEF +15%	optionType=10, reqLevel=50
+20351	Ignore Damage +3, Proc Chance 20%	optionType=20
+20352	Ignore Damage +5, Proc Chance 20%	optionType=20
+20353	Ignore Damage +7, Proc Chance 30%	optionType=20
+20366	Duration 1 sec	optionType=52
+20376	Damage Reflect +20%, Proc Chance 5%	optionType=90
+20396	Duration 2 sec	optionType=52, reqLevel=50
+20401	Special HP Recovery +40, Proc Chance 15%	optionType=54
+20406	Special MP Recovery +40, Proc Chance 15%	optionType=54
+20501	MP Cost Reduction +15%	optionType=90, reqLevel=50
+20511	MP Restore on Attack +20	optionType=90, reqLevel=50
+20650	Meso Drop Rate +10%	optionType=90, reqLevel=30
+20656	Item Drop Rate +10%	optionType=90, reqLevel=30
+30041	STR +3%	
+30042	DEX +3%	
+30043	INT +3%	
+30044	LUK +3%	
+30045	Max HP +3%	optionType=11
+30046	Max MP +3%	optionType=11
+30047	Accuracy +3%	
+30048	Avoidability +3%	
+30051	Weapon ATT +3%	optionType=10
+30052	Magic ATT +3%	optionType=10
+30053	Physical DEF +3%	optionType=11
+30054	Magic DEF +3%	optionType=11
+30055	Critical Rate +3%	optionType=10
+30070	Damage +3%	optionType=10
+30086	STR +2%, DEX +2%, INT +2%, LUK +2%	
+30106	All Skills +1	optionType=51, reqLevel=30
+30107	All Skills +2	optionType=51, reqLevel=70
+30291	Ignore Enemy DEF +30%	optionType=10, reqLevel=50
+30356	Ignore Damage +20%, Proc Chance 5%	optionType=20, reqLevel=20
+30357	Ignore Damage +40%, Proc Chance 5%	optionType=20, reqLevel=40
+30366	Duration 2 sec	optionType=52
+30371	Proc Chance 2%, Duration 5 sec	optionType=52
+30376	Damage Reflect +30%, Proc Chance 5%	optionType=90
+30501	MP Cost Reduction +10%	optionType=90, reqLevel=50
+30511	MP Restore on Attack +40	optionType=90, reqLevel=50
+30551	Potion Recovery +10%	optionType=11
+30601	Boss Damage +20%	optionType=10, reqLevel=50
+30602	Boss Damage +30%	optionType=10, reqLevel=50
+30650	Meso Drop Rate +20%	optionType=90, reqLevel=50
+30656	Item Drop Rate +20%	optionType=90, reqLevel=50
+30701	Proc Chance 1%	optionType=54, reqLevel=20
+30702	Proc Chance 2%	optionType=54, reqLevel=40
+31001	Item Potential Skill (SkillID 8000)	optionType=55, reqLevel=70
+31002	Item Potential Skill (SkillID 8001)	optionType=51, reqLevel=70
+31003	Item Potential Skill (SkillID 8002)	optionType=54, reqLevel=120
+31004	Item Potential Skill (SkillID 8003)	optionType=53, reqLevel=70

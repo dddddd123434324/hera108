@@ -7,9 +7,11 @@ import client.inventory.MaplePet;
 import constants.GameConstants;
 import constants.ServerConstants;
 import database.DatabaseConnection;
+import handling.channel.ChannelServer;
 import scripting.NPCScriptManager;
 import server.ItemInfo;
 import server.MapleInventoryManipulator;
+import server.Randomizer;
 import server.log.LogType;
 import server.log.ServerLogger;
 import tools.FileoutputUtil;
@@ -24,12 +26,33 @@ import java.sql.SQLException;
 import java.util.*;
 import tools.packet.PetPacket;
 
-import server.MapleInventoryManipulator;
-
 public class MapleQuest implements Serializable {
 
     private static final long serialVersionUID = 9179541993413738569L;
     private static final Map<Integer, MapleQuest> quests = new LinkedHashMap<Integer, MapleQuest>();
+    private static final String GOLDRICHQUEST_DAILY_LIMIT_MESSAGE = "골드리치의 아르바이트 퀘스트는 계정 당 일일 1회만 진행 가능합니다.";
+    private static final String GOLDRICHQUEST_DAILY_RESET_MESSAGE = "골드리치 아르바이트 일일 제한이 초기화되었습니다.";
+    private static final Set<Integer> goldrichquestQuestIdList = new HashSet<Integer>();
+    private static final int[][] goldrichquestRandomRewardItemList = { // 골드리치 보상 랜덤 코드
+        {2000005, 500},
+        {2010005, 1000},
+        {4000999, 3000},
+        {4001126, 3000},
+        {5060003, 5},
+        {2028009, 1},
+        {2028012, 1},
+        {2049009, 1},
+        {2049010, 1},
+        {2049403, 1},
+        {2028013, 1},
+        {5062100, 10},
+        {5062000, 30},
+        {5062002, 10},
+        {4310007, 20},
+        {2430191, 1},
+        {2430192, 1},
+        {2049116, 1}
+    };
     protected int id, timeLimit, timeLimit2;
     protected final List<MapleQuestRequirement> startReqs = new LinkedList<MapleQuestRequirement>();
     protected final List<MapleQuestRequirement> completeReqs = new LinkedList<MapleQuestRequirement>();
@@ -40,6 +63,22 @@ public class MapleQuest implements Serializable {
     private boolean autoStart = false, autoPreComplete = false, repeatable = false, customend = false, blocked = false, autoAccept = false, autoComplete = false, scriptedStart = false, customQuest = true;
     private int viewMedalItem = 0, selectedSkillID = 0;
     protected String name = "";
+
+    static { // 골드리치 퀘스트 코드
+        goldrichquestQuestIdList.add(10828);
+        goldrichquestQuestIdList.add(10832);
+        goldrichquestQuestIdList.add(10833);
+        goldrichquestQuestIdList.add(10834);
+        goldrichquestQuestIdList.add(10835);
+        goldrichquestQuestIdList.add(10836);
+        goldrichquestQuestIdList.add(10837);
+        goldrichquestQuestIdList.add(10838);
+        goldrichquestQuestIdList.add(10839);
+        goldrichquestQuestIdList.add(10840);
+        goldrichquestQuestIdList.add(10842);
+        goldrichquestQuestIdList.add(10845);
+        goldrichquestQuestIdList.add(10846);
+    }
 
     protected MapleQuest(final int id) {
         this.id = id;
@@ -230,6 +269,10 @@ public class MapleQuest implements Serializable {
             System.out.println("debug2");
             return false;
         }
+        if (isGoldrichquestTarget(id) && isGoldrichquestBlocked(c.getAccountID())) {
+            c.dropMessage(5, GOLDRICHQUEST_DAILY_LIMIT_MESSAGE);
+            return false;
+        }
         /*if (autoComplete && npcid != null && viewMedalItem <= 0) {
          forceComplete(c, npcid);
          return false; //skip script
@@ -299,7 +342,8 @@ public class MapleQuest implements Serializable {
     }
 
     public void complete(MapleCharacter c, int npc, Integer selection) {
-        if (c.getMap() != null && (autoComplete && canComplete(c, npc) || autoPreComplete && canComplete(c, npc) || checkNPCOnMap(c, npc)) && canComplete(c, npc)) {
+        final boolean canCompleteQuest = canComplete(c, npc);
+        if (c.getMap() != null && canCompleteQuest && (autoComplete || autoPreComplete || checkNPCOnMap(c, npc))) {
             for (MapleQuestAction a : completeActs) {
                 if (!a.checkEnd(c, selection)) {
                     return;
@@ -489,6 +533,23 @@ public class MapleQuest implements Serializable {
     }
 
     public void forceComplete(MapleCharacter c, int npc) {
+        final boolean goldrichquestTarget = isGoldrichquestTarget(id);
+        int[] goldrichquestReward = null;
+        if (goldrichquestTarget) {
+            goldrichquestReward = getGoldrichquestRandomReward();
+            if (goldrichquestReward == null || goldrichquestReward[0] <= 0 || goldrichquestReward[1] <= 0) {
+                return;
+            }
+            if (!MapleInventoryManipulator.checkSpace(c.getClient(), goldrichquestReward[0], goldrichquestReward[1], "")) {
+                c.dropMessage(5, "골드리치의 아르바이트 퀘스트는 계정 당 일일 1회만 가능합니다.");
+                return;
+            }
+        }
+        if (goldrichquestTarget && !markGoldrichquestCompleted(c.getAccountID())) {
+            c.dropMessage(5, GOLDRICHQUEST_DAILY_LIMIT_MESSAGE);
+            return;
+        }
+
         final MapleQuestStatus newStatus = new MapleQuestStatus(this, (byte) 2, npc);
         if (newStatus.getQuest().getId() == 3083 || newStatus.getQuest().getId() == 3096) {
             for (final MaplePet pet : c.getPets()) {
@@ -510,6 +571,11 @@ public class MapleQuest implements Serializable {
             }
         }
         c.updateQuest(newStatus, update);
+
+        if (goldrichquestTarget) {
+            giveGoldrichquestRandomReward(c, goldrichquestReward);
+            c.dropMessage(5, GOLDRICHQUEST_DAILY_LIMIT_MESSAGE);
+        }
     }
 
     public int getId() {
@@ -570,5 +636,164 @@ public class MapleQuest implements Serializable {
         for (MapleQuestRequirement r : completeReqs) {
             r.gmQuestCheck(c, npcid);
         }
+    }
+
+    private static boolean isGoldrichquestTarget(final int questId) {
+        return goldrichquestQuestIdList.contains(questId);
+    }
+
+    private static Set<Integer> getGoldrichquestStatusResetTargetQuestIds() {
+        final Set<Integer> targetQuestIds = new LinkedHashSet<Integer>(goldrichquestQuestIdList);
+        targetQuestIds.add(10848);
+        return targetQuestIds;
+    }
+
+    private static void resetOnlineGoldrichquestQuestStatus(final Set<Integer> targetQuestIds) {
+        try {
+            for (ChannelServer ch : ChannelServer.getAllInstances()) {
+                for (MapleCharacter chr : ch.getPlayerStorage().getAllCharacters()) {
+                    for (int questId : targetQuestIds) {
+                        final MapleQuestStatus questStatus = chr.getQuestNoAdd(MapleQuest.getInstance(questId));
+                        if (questStatus != null) {
+                            questStatus.setStatus((byte) 0);
+                            chr.updateQuest(questStatus);
+                        }
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            System.err.println("[MapleQuest] online goldrichquest status reset failed");
+            t.printStackTrace();
+        }
+    }
+
+    private static void resetDatabaseGoldrichquestQuestStatus(final Set<Integer> targetQuestIds) {
+        if (targetQuestIds.isEmpty()) {
+            return;
+        }
+        final StringJoiner inClause = new StringJoiner(",");
+        for (int i = 0; i < targetQuestIds.size(); i++) {
+            inClause.add("?");
+        }
+        try (Connection con = DatabaseConnection.getConnection();
+                PreparedStatement ps = con.prepareStatement("UPDATE queststatus SET status = 0 WHERE quest IN (" + inClause + ")")) {
+            int index = 1;
+            for (int questId : targetQuestIds) {
+                ps.setInt(index++, questId);
+            }
+            final int updatedRows = ps.executeUpdate();
+            System.out.println("[MapleQuest] midnight queststatus reset complete. rows=" + updatedRows);
+        } catch (SQLException e) {
+            System.err.println("[MapleQuest] db goldrichquest status reset failed");
+            e.printStackTrace();
+        }
+    }
+
+    private static void resetOnlineGoldrichquestDailyLimitFlag() {
+        final Set<Integer> onlineAccountIds = new LinkedHashSet<Integer>();
+        final List<MapleCharacter> onlineCharacters = new ArrayList<MapleCharacter>();
+
+        try {
+            for (ChannelServer ch : ChannelServer.getAllInstances()) {
+                for (MapleCharacter chr : ch.getPlayerStorage().getAllCharacters()) {
+                    if (chr == null) {
+                        continue;
+                    }
+                    onlineCharacters.add(chr);
+                    if (chr.getAccountID() > 0) {
+                        onlineAccountIds.add(chr.getAccountID());
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            System.err.println("[MapleQuest] collect online account ids for lastvoteip reset failed");
+            t.printStackTrace();
+            return;
+        }
+
+        if (!onlineAccountIds.isEmpty()) {
+            final StringJoiner inClause = new StringJoiner(",");
+            for (int i = 0; i < onlineAccountIds.size(); i++) {
+                inClause.add("?");
+            }
+            try (Connection con = DatabaseConnection.getConnection();
+                    PreparedStatement ps = con.prepareStatement("UPDATE accounts SET lastvoteip = 0 WHERE id IN (" + inClause + ")")) {
+                int index = 1;
+                for (int accountId : onlineAccountIds) {
+                    ps.setInt(index++, accountId);
+                }
+                final int updatedRows = ps.executeUpdate();
+                System.out.println("[MapleQuest] online lastvoteip reset complete. rows=" + updatedRows);
+            } catch (SQLException e) {
+                System.err.println("[MapleQuest] online lastvoteip reset failed");
+                e.printStackTrace();
+            }
+        }
+
+        for (MapleCharacter chr : onlineCharacters) {
+            // chr.dropMessage(5, GOLDRICHQUEST_DAILY_RESET_MESSAGE);
+        }
+    }
+
+    private static boolean isGoldrichquestBlocked(final int accountId) {
+        if (accountId <= 0) {
+            return false;
+        }
+        try (Connection con = DatabaseConnection.getConnection();
+                PreparedStatement ps = con.prepareStatement("SELECT lastvoteip FROM accounts WHERE id = ?")) {
+            ps.setInt(1, accountId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt("lastvoteip") == 1;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private static boolean markGoldrichquestCompleted(final int accountId) {
+        if (accountId <= 0) {
+            return false;
+        }
+        try (Connection con = DatabaseConnection.getConnection();
+                PreparedStatement ps = con.prepareStatement("UPDATE accounts SET lastvoteip = 1 WHERE id = ? AND (lastvoteip IS NULL OR lastvoteip <> 1)")) {
+            ps.setInt(1, accountId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private static int[] getGoldrichquestRandomReward() {
+        if (goldrichquestRandomRewardItemList.length <= 0) {
+            return null;
+        }
+        return goldrichquestRandomRewardItemList[Randomizer.nextInt(goldrichquestRandomRewardItemList.length)];
+    }
+
+    private static void giveGoldrichquestRandomReward(final MapleCharacter chr, final int[] reward) {
+        if (reward == null || reward.length < 2) {
+            return;
+        }
+        if (MapleInventoryManipulator.addById(chr.getClient(), reward[0], (short) reward[1], "goldrichquest reward")) {
+            chr.getClient().getSession().write(MaplePacketCreator.getShowItemGain(reward[0], (short) reward[1], true));
+            chr.dropMessage(5, "골드리치로부터 진귀한 보상을 받았습니다.");
+        }
+    }
+
+    public static void resetGoldrichquestDailyLimit() {
+        try (Connection con = DatabaseConnection.getConnection();
+                PreparedStatement ps = con.prepareStatement("UPDATE accounts SET lastvoteip = 0")) {
+            final int updatedRows = ps.executeUpdate();
+            System.out.println("[MapleQuest] midnight lastvoteip reset complete. rows=" + updatedRows);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        resetOnlineGoldrichquestDailyLimitFlag();
+
+        final Set<Integer> targetQuestIds = getGoldrichquestStatusResetTargetQuestIds();
+        resetOnlineGoldrichquestQuestStatus(targetQuestIds);
+        resetDatabaseGoldrichquestQuestStatus(targetQuestIds);
     }
 }

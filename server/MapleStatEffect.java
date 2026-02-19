@@ -9,6 +9,7 @@ import client.status.MonsterStatusEffect;
 import constants.GameConstants;
 import handling.channel.ChannelServer;
 import provider.MapleData;
+import provider.MapleDataEntity;
 import provider.MapleDataTool;
 import provider.MapleDataType;
 import server.MapleCarnivalFactory.MCSkill;
@@ -28,6 +29,8 @@ import java.util.concurrent.ScheduledFuture;
 public class MapleStatEffect implements Serializable {
 
     private static final long serialVersionUID = 9179541993413738569L;
+    private static final ThreadLocal<Integer> PARSE_SOURCE_ID = new ThreadLocal<Integer>();
+    private static final ThreadLocal<Integer> PARSE_LEVEL = new ThreadLocal<Integer>();
     private byte mastery,
             mhpR,
             mmpR,
@@ -153,6 +156,23 @@ public class MapleStatEffect implements Serializable {
         }
     }
 
+    private static String buildDataPath(final MapleData data) {
+        if (data == null) {
+            return "(null)";
+        }
+        final StringBuilder sb = new StringBuilder();
+        MapleDataEntity cur = data;
+        while (cur != null) {
+            if (sb.length() == 0) {
+                sb.insert(0, cur.getName());
+            } else {
+                sb.insert(0, cur.getName() + "/");
+            }
+            cur = cur.getParent();
+        }
+        return sb.toString();
+    }
+
     private final static int parseEval(String path, MapleData source, int def, String variables, int level) {
         if (variables == null) {
             return MapleDataTool.getIntConvert(path, source, def);
@@ -164,13 +184,33 @@ public class MapleStatEffect implements Serializable {
             if (dd.getType() != MapleDataType.STRING) {
                 return MapleDataTool.getIntConvert(path, source, def);
             }
-            String dddd = MapleDataTool.getString(dd).replace(variables, String.valueOf(level));
-            if (dddd.substring(0, 1).equals("-")) { //-30+3*x
-                dddd = "n" + dddd.substring(1, dddd.length()); //n30+3*x
-            } else if (dddd.substring(0, 1).equals("=")) { //lol nexon and their mistakes
-                dddd = dddd.substring(1, dddd.length());
+            final String raw = MapleDataTool.getString(dd);
+            if (raw == null || raw.isEmpty()) {
+                final Integer sourceId = PARSE_SOURCE_ID.get();
+                final Integer sourceLevel = PARSE_LEVEL.get();
+                throw new RuntimeException("Empty stat formula"
+                        + " [sourceId=" + (sourceId == null ? "unknown" : sourceId)
+                        + ", level=" + (sourceLevel == null ? level : sourceLevel)
+                        + ", path=" + buildDataPath(source) + "/" + path + "]");
             }
-            return (int) (new CaltechEval(dddd).evaluate());
+            String dddd = raw.replace(variables, String.valueOf(level));
+            if (dddd.startsWith("-")) { //-30+3*x
+                dddd = "n" + dddd.substring(1); //n30+3*x
+            } else if (dddd.startsWith("=")) { //lol nexon and their mistakes
+                dddd = dddd.substring(1);
+            }
+            try {
+                return (int) (new CaltechEval(dddd).evaluate());
+            } catch (RuntimeException e) {
+                final Integer sourceId = PARSE_SOURCE_ID.get();
+                final Integer sourceLevel = PARSE_LEVEL.get();
+                throw new RuntimeException("Failed to parse stat formula"
+                        + " [sourceId=" + (sourceId == null ? "unknown" : sourceId)
+                        + ", level=" + (sourceLevel == null ? level : sourceLevel)
+                        + ", path=" + buildDataPath(source) + "/" + path
+                        + ", raw=\"" + raw + "\""
+                        + ", eval=\"" + dddd + "\"]", e);
+            }
         }
     }
 
@@ -179,6 +219,8 @@ public class MapleStatEffect implements Serializable {
         ret.sourceid = sourceid;
         ret.skill = skill;
         ret.level = (byte) level;
+        PARSE_SOURCE_ID.set(sourceid);
+        PARSE_LEVEL.set(level);
         if (source == null) {
             ret.isPotion = false;
             return ret;
@@ -3497,7 +3539,7 @@ public class MapleStatEffect implements Serializable {
     }
 
     private int getMpCon() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return mpCon;
     }
 
     public static class CancelEffectAction implements Runnable {

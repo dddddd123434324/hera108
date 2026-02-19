@@ -561,7 +561,14 @@ public void applyPostDumpSlotMax() {
         con.setAutoCommit(false);
 
         int updatedRows = 0;
-        try (PreparedStatement ps = con.prepareStatement("UPDATE wz_itemdata SET slotMax = 9000 WHERE slotMax >= 2")) {
+        final String slotMaxFixSql =
+                "UPDATE wz_itemdata SET slotMax = 9000 "
+                + "WHERE slotMax >= 2 "
+                + "AND NOT (itemid BETWEEN 2070000 AND 2070026) "
+                + "AND NOT (itemid BETWEEN 2330000 AND 2330008) "
+                + "AND itemid <> 2331000 "
+                + "AND itemid <> 2332000";
+        try (PreparedStatement ps = con.prepareStatement(slotMaxFixSql)) {
             updatedRows = ps.executeUpdate();
         }
         con.commit();

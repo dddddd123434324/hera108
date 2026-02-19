@@ -130,7 +130,8 @@ public class NPCScriptManager extends AbstractScriptManager {
                     dispose(c);
                 } else {
                     c.setClickedNPC();
-                    cm.getIv().invokeFunction("action", mode, type, selection);
+                    int mappedSelection = cm.remapStyleSelection(type, selection);
+                    cm.getIv().invokeFunction("action", mode, type, mappedSelection);
                 }
             } catch (final Exception e) {
                 System.err.println("Error executing NPC script. NPC ID : " + cm.getNpc() + ":" + e);
@@ -188,7 +189,8 @@ public class NPCScriptManager extends AbstractScriptManager {
                 dispose(c);
             } else {
                 c.setClickedNPC();
-                cm.getIv().invokeFunction("start", mode, type, selection);
+                int mappedSelection = cm.remapStyleSelection(type, selection);
+                cm.getIv().invokeFunction("start", mode, type, mappedSelection);
             }
         } catch (Exception e) {
             System.err.println("Error executing Quest script. (" + cm.getQuest() + ")...NPC: " + cm.getNpc() + ":" + e);
@@ -245,7 +247,8 @@ public class NPCScriptManager extends AbstractScriptManager {
                 dispose(c);
             } else {
                 c.setClickedNPC();
-                cm.getIv().invokeFunction("end", mode, type, selection);
+                int mappedSelection = cm.remapStyleSelection(type, selection);
+                cm.getIv().invokeFunction("end", mode, type, mappedSelection);
             }
         } catch (Exception e) {
             System.err.println("Error executing Quest script. (" + cm.getQuest() + ")...NPC: " + cm.getNpc() + ":" + e);

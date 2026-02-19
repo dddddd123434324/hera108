@@ -299,7 +299,15 @@ public class NPCScriptVirtualMachine implements Runnable {
         for (int i = 0; i < avatars.size(); ++i) {
             avat[i] = avatars.get(i);
         }
-        c.getSession().write(MaplePacketCreator.getNPCTalkStyle(npcid, text, avat));
+        int[] packetStyles = avat;
+        int selectionShift = 0;
+        if (needsFace50000PreviewFix(avat) && avat.length < 255) {
+            packetStyles = new int[avat.length + 1];
+            packetStyles[0] = 20000; // Force face-style preview mode for 50000+ face IDs.
+            System.arraycopy(avat, 0, packetStyles, 1, avat.length);
+            selectionShift = 1;
+        }
+        c.getSession().write(MaplePacketCreator.getNPCTalkStyle(npcid, text, packetStyles));
         try {
             synchronized (gate) {
                 gate.wait();
@@ -307,15 +315,31 @@ public class NPCScriptVirtualMachine implements Runnable {
         } catch (Exception e) {
         }
         try {
-            return avat[selection];
+            int selectedIndex = selection;
+            if (selectionShift > 0 && selectedIndex >= 0) {
+                selectedIndex = Math.max(0, selectedIndex - selectionShift);
+            }
+            return avat[selectedIndex];
         } catch (ArrayIndexOutOfBoundsException aiobe) {
             return -3;
         }
     }
 
+    private static boolean isFaceAvatar(int avatar) {
+        return (avatar >= 20000 && avatar < 30000) || (avatar >= 50000 && avatar < 60000);
+    }
+
+    private static boolean needsFace50000PreviewFix(int[] styles) {
+        return styles != null
+                && styles.length > 0
+                && styles[0] >= 50000
+                && styles[0] < 60000
+                && isFaceAvatar(styles[0]);
+    }
+
     public boolean hasPath(int avatar) {
         String path = ServerProperties.WZ_PATH + "/Character.wz/";
-        if (avatar >= 20000 && avatar < 30000 || avatar >= 50000 && avatar < 60000) {
+        if (isFaceAvatar(avatar)) {
             path += "Face/";
         } else if (avatar >= 30000 && avatar < 50000 || avatar >= 60000) {
             path += "Hair/";

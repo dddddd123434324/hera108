@@ -83,6 +83,7 @@ import server.MedalRanking;
 import server.MedalRanking.MedalRankingType;
 import server.RankingWorker;
 import server.RateManager;
+import server.ServerProperties;
 import server.Timer;
 import server.Timer.CloneTimer;
 import server.life.MapleLifeFactory;
@@ -111,6 +112,8 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
     public boolean pendingDisposal = false;
     private Invocable iv;
     private int objectId;
+    private int styleSelectionShift = 0;
+    private int[] styleSelectionMap = null;
 
     public java.util.List<scripting.NPCScriptManager.SkillSearchHit> searchSkills(String keyword, int limit) {
         return scripting.NPCScriptManager.searchSkills(keyword, limit);
@@ -386,34 +389,84 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
             return;
         }
         List<Integer> avatars = new ArrayList<>();
-        for (int i : args) {
+        List<Integer> selectionMap = new ArrayList<>();
+        for (int idx = 0; idx < args.length; idx++) {
+            int i = args[idx];
             if (hasPath(i) || i < 100/* && (c.getPlayer().getFace() != i && c.getPlayer().getHair() != i && c.getPlayer().getSkinColor() != i)*/) {
                 avatars.add(i);
+                selectionMap.add(idx);
             }
         }
         int[] avat = new int[avatars.size()];
+        int[] remap = new int[avatars.size()];
         for (int i = 0; i < avatars.size(); ++i) {
             avat[i] = avatars.get(i);
+            remap[i] = selectionMap.get(i);
         }
-        c.getSession().write(MaplePacketCreator.getNPCTalkStyle(id, text, avat));
+        c.getSession().write(MaplePacketCreator.getNPCTalkStyle(id, text, buildStylePacketStyles(avat, remap)));
 //        c.getSession().write(MaplePacketCreator.getNPCTalkStyle(id, text, args));
         lastMsg = 8;
     }
 
+    private static boolean isFaceAvatar(int avatar) {
+        return (avatar >= 20000 && avatar < 30000) || (avatar >= 50000 && avatar < 60000);
+    }
+
+    private static boolean isHairAvatar(int avatar) {
+        return (avatar >= 30000 && avatar < 50000) || avatar >= 60000;
+    }
+
+    private static boolean needsFace50000PreviewFix(int[] styles) {
+        return styles != null
+                && styles.length > 0
+                && styles[0] >= 50000
+                && styles[0] < 60000
+                && isFaceAvatar(styles[0]);
+    }
+
+    private int[] buildStylePacketStyles(int[] styles) {
+        return buildStylePacketStyles(styles, null);
+    }
+
+    private int[] buildStylePacketStyles(int[] styles, int[] remapBase) {
+        styleSelectionShift = 0;
+        styleSelectionMap = null;
+        if (styles == null) {
+            return new int[0];
+        }
+        int[] remap = remapBase;
+        if (remap == null || remap.length != styles.length) {
+            remap = new int[styles.length];
+            for (int i = 0; i < styles.length; i++) {
+                remap[i] = i;
+            }
+        }
+        if (!needsFace50000PreviewFix(styles) || styles.length >= 255) {
+            styleSelectionMap = remap;
+            return styles;
+        }
+        int[] packetStyles = new int[styles.length + 1];
+        int[] packetRemap = new int[styles.length + 1];
+        packetStyles[0] = 20000; // Force face-style preview mode for 50000+ face IDs.
+        packetRemap[0] = remap.length > 0 ? remap[0] : 0;
+        System.arraycopy(styles, 0, packetStyles, 1, styles.length);
+        System.arraycopy(remap, 0, packetRemap, 1, remap.length);
+        styleSelectionShift = 1;
+        styleSelectionMap = packetRemap;
+        return packetStyles;
+    }
+
     public boolean hasPath(int avatar) {
-        StringBuilder path = new StringBuilder("wz/Character.wz/");
-        if (avatar >= 20000 && avatar < 30000 || avatar >= 50000 && avatar < 60000) {
+        StringBuilder path = new StringBuilder(ServerProperties.WZ_PATH).append("/Character.wz/");
+        if (isFaceAvatar(avatar)) {
             path.append("Face/");
-        } else if (avatar >= 30000 && avatar < 50000 || avatar >= 60000) {
+        } else if (isHairAvatar(avatar)) {
             path.append("Hair/");
         } else if (avatar < 100) {
             return true;
         }
         path.append("000" + avatar + ".img.xml");
         File f = new File(path.toString());
-        if (!f.exists()) {
-            c.getPlayer().dropMessage(5, "Avatar " + avatar + " does not exists..");
-        }
         return f.exists();
     }
 
@@ -453,7 +506,7 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
         if (lastMsg > -1) {
             return;
         }
-        c.getSession().write(MaplePacketCreator.getNPCTalkStyle(id, text, styles));
+        c.getSession().write(MaplePacketCreator.getNPCTalkStyle(id, text, buildStylePacketStyles(styles)));
         lastMsg = 8;
     }
 
@@ -531,9 +584,12 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
         if (args < 100) {
             c.getPlayer().setSkinColor((byte) args);
             c.getPlayer().updateSingleStat(MapleStat.SKIN, args);
-        } else if (args < 30000) {
+        } else if (isFaceAvatar(args)) {
             c.getPlayer().setFace(args);
             c.getPlayer().updateSingleStat(MapleStat.FACE, args);
+        } else if (isHairAvatar(args)) {
+            c.getPlayer().setHair(args);
+            c.getPlayer().updateSingleStat(MapleStat.HAIR, args);
         } else {
             c.getPlayer().setHair(args);
             c.getPlayer().updateSingleStat(MapleStat.HAIR, args);
@@ -552,9 +608,12 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
         if (args < 100) {
             c.getPlayer().setSkinColor((byte) args);
             c.getPlayer().updateSingleStat(MapleStat.SKIN, args);
-        } else if (args < 30000) {
+        } else if (isFaceAvatar(args)) {
             c.getPlayer().setFace(args);
             c.getPlayer().updateSingleStat(MapleStat.FACE, args);
+        } else if (isHairAvatar(args)) {
+            c.getPlayer().setHair(args);
+            c.getPlayer().updateSingleStat(MapleStat.HAIR, args);
         } else {
             c.getPlayer().setHair(args);
             c.getPlayer().updateSingleStat(MapleStat.HAIR, args);
@@ -567,9 +626,12 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
         if (args < 100) {
             c.getPlayer().setSkinColor((byte) args);
             c.getPlayer().updateSingleStat(MapleStat.SKIN, args);
-        } else if (args < 30000) {
+        } else if (isFaceAvatar(args)) {
             c.getPlayer().setFace(args);
             c.getPlayer().updateSingleStat(MapleStat.FACE, args);
+        } else if (isHairAvatar(args)) {
+            c.getPlayer().setHair(args);
+            c.getPlayer().updateSingleStat(MapleStat.HAIR, args);
         } else {
             c.getPlayer().setHair(args);
             c.getPlayer().updateSingleStat(MapleStat.HAIR, args);
@@ -1543,6 +1605,29 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
         this.lastMsg = last;
     }
 
+    public int remapStyleSelection(byte type, int selection) {
+        if (type != 8) {
+            return selection;
+        }
+        if (selection >= 0 && styleSelectionMap != null) {
+            int mappedSelection = selection;
+            if (mappedSelection >= styleSelectionMap.length) {
+                mappedSelection = styleSelectionMap.length - 1;
+            }
+            int remapped = mappedSelection >= 0 ? styleSelectionMap[mappedSelection] : selection;
+            styleSelectionShift = 0;
+            styleSelectionMap = null;
+            return remapped;
+        }
+        int shift = styleSelectionShift;
+        styleSelectionShift = 0;
+        styleSelectionMap = null;
+        if (selection < 0 || shift <= 0) {
+            return selection;
+        }
+        return Math.max(0, selection - shift);
+    }
+
     public final void maxAllSkills() {
         for (Skill skil : SkillFactory.getAllSkills()) {
             if (GameConstants.isApplicableSkill(skil.getId()) && skil.getId() < 90000000) { //no db/additionals/resistance skills
@@ -1662,7 +1747,7 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
                         itemId = 4031041; //display sack of cash
                         namez = (de.Minimum * RateManager.DISPLAY_MESO) + "~" + (de.Maximum * RateManager.DISPLAY_MESO) + " 메소";
                     }
-                    ch = de.chance * RateManager.DISPLAY_DROP;
+                    ch = de.chance * RateManager.getTrueDropRate();
                     name.append("#L" + itemId + "#" + (num + 1) + ") #v" + itemId + "#" + namez + " - " + (Integer.valueOf(ch >= 999999 ? 1000000 : ch).doubleValue() / 10000.0) + "%" + (de.questid > 0 && MapleQuest.getInstance(de.questid).getName().length() > 0 ? ("퀘스트 : " + MapleQuest.getInstance(de.questid).getName() + "") : "") + "\r\n");
                     num++;
                 }

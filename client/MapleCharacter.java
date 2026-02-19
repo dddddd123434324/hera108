@@ -176,6 +176,7 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
     private final int[] oneClickCubeDesired = new int[]{0, 0, 0};
 
     private volatile boolean oneClickCubeDupMajorEnabled = false;
+    private volatile boolean oneClickCubeDupMajorAllEnabled = false;
 
     private volatile boolean pendingOneClickCube = false;
     private volatile int pendingOneClickCubeItemId = 0;
@@ -344,11 +345,19 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
             return "희망 잠재능력이 감지되었습니다.";
         }
 
-        // 2) 중복 주요 옵션 감지(ON일 때)
+        // 2) 중복 주요 옵션 감지(ON일 때, 2줄 이상)
         if (isOneClickCubeDupMajorEnabled()) {
             final String dup = getDupMajorDetected(eq);
             if (dup != null) {
                 return "중복 주요 옵션이 감지되었습니다: " + dup;
+            }
+        }
+
+        // 3) 중복 주요 옵션 3줄 감지(ON일 때)
+        if (isOneClickCubeDupMajorAllEnabled()) {
+            final String dupAll = getDupMajorAllDetected(eq);
+            if (dupAll != null) {
+                return "중복 주요 옵션 3줄이 감지되었습니다: " + dupAll;
             }
         }
 
@@ -357,6 +366,15 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
 
     // (추가) ON 상태에서 주요 옵션군이 2줄 이상이면 감지
     private String getDupMajorDetected(final client.inventory.Equip eq) {
+        return getDupMajorDetected(eq, 2);
+    }
+
+    // (추가) ON 상태에서 주요 옵션군이 3줄이면 감지
+    private String getDupMajorAllDetected(final client.inventory.Equip eq) {
+        return getDupMajorDetected(eq, 3);
+    }
+
+    private String getDupMajorDetected(final client.inventory.Equip eq, final int minCount) {
         final int p1 = eq.getPotential1();
         final int p2 = eq.getPotential2();
         final int p3 = eq.getPotential3();
@@ -394,25 +412,25 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
         }
 
         final java.util.List<String> hit = new java.util.ArrayList<String>();
-        if (str >= 2) {
+        if (str >= minCount) {
             hit.add("힘%");
         }
-        if (dex >= 2) {
+        if (dex >= minCount) {
             hit.add("덱스%");
         }
-        if (intl >= 2) {
+        if (intl >= minCount) {
             hit.add("인트%");
         }
-        if (luk >= 2) {
+        if (luk >= minCount) {
             hit.add("럭%");
         }
-        if (atk >= 2) {
+        if (atk >= minCount) {
             hit.add("공격력%");
         }
-        if (matk >= 2) {
+        if (matk >= minCount) {
             hit.add("마력%");
         }
-        if (ied >= 2) {
+        if (ied >= minCount) {
             hit.add("방무%");
         }
 
@@ -9137,7 +9155,7 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
         if (ranks != null && ranks.size() > 0) {
             int num = 0, itemId = 0;
             double ch = 0;
-            double droprate = RateManager.DROP;
+            double droprate = RateManager.getTrueDropRate();
             MonsterDropEntry de;
             StringBuilder name = new StringBuilder();
             StringBuilder name2 = new StringBuilder();
@@ -9274,7 +9292,7 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
 
         StringBuilder text = new StringBuilder(" #i" + itemid + ":# #b#z" + itemid + "##k (코드 : " + itemid + ")\r\n\r\n");
         double chance = 0;
-        double droprate = RateManager.DROP;
+        double droprate = RateManager.getTrueDropRate();
         try {
             con = DatabaseConnection.getConnection();
             ps = con.prepareStatement("SELECT * FROM drop_data WHERE itemid = ?");
@@ -9305,7 +9323,7 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
                 text.append("   #b" + mob.getStats().getName() + "#k (Lv. " + mob.getStats().getLevel() + ") (몬스터 코드 : " + mob.getId() + ")\r\n\r\n");
                 text.append("   몬스터 체력 : " + getBanJum(mob.getStats().getHp()) + "\r\n");
                 text.append("   획득 경험치 : " + getBanJum((long) (mob.getStats().getExp() * RateManager.EXP)) + "\r\n");
-                chance = chance / 10000.0;
+                chance = (chance * droprate) / 10000.0;
                 if (chance > 100) {
                     text.append("   드롭 확률 : 100%\r\n");
                 } else if (chance < 0.001) {
@@ -9361,7 +9379,7 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
                 }
                 count++;
                 text.append("#b" + mob.getStats().getName() + "#k (몬스터 코드 : " + mob.getId() + ")\r\n");
-                chance = (double) ((double) 100 * ((double) rs.getInt("chance") * (double) RateManager.DROP) / (double) 1000000);
+                chance = (double) ((double) 100 * ((double) rs.getInt("chance") * (double) RateManager.getTrueDropRate()) / (double) 1000000);
                 text.append("#b#z" + rs.getInt("itemid") + "##k");
                 if (chance > 100) {
                     text.append(" - 드롭 확률 : 100%");
@@ -9403,7 +9421,7 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
         int itemid = 0;
         if (global.size() > 0) {
             for (int i = 0; i < global.size(); i++) {
-                chance = (double) ((double) 100 * ((double) global.get(i).chance * (double) RateManager.DROP) / (double) 1000000);
+                chance = (double) ((double) 100 * ((double) global.get(i).chance * (double) RateManager.getTrueDropRate()) / (double) 1000000);
                 if (chance > 100) {
                     Text2.append("- 100%");
                 } else if (chance < 0.001) {
@@ -9792,6 +9810,8 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
                     oneClickCubeDesired[key - 1] = val;
                 } else if (key == 6) {
                     oneClickCubeDupMajorEnabled = (val == 1);
+                } else if (key == 7) {
+                    oneClickCubeDupMajorAllEnabled = (val == 1);
                 }
             }
         } catch (Exception e) {
@@ -9864,6 +9884,37 @@ public class MapleCharacter extends AnimatedMapleMapObject implements Serializab
             con = database.DatabaseConnection.getConnection();
             ps = con.prepareStatement(
                     "INSERT INTO oneclickcube_pref (characterid, prefkey, value) VALUES (?, 6, ?) "
+                    + "ON DUPLICATE KEY UPDATE value = VALUES(value)"
+            );
+            ps.setInt(1, this.id);
+            ps.setInt(2, enabled ? 1 : 0);
+            ps.executeUpdate();
+        } catch (Exception e) {
+        } finally {
+            try {
+                if (ps != null) {
+                    ps.close();
+                }
+            } catch (Exception ignore) {
+            }
+        }
+    }
+
+    public boolean isOneClickCubeDupMajorAllEnabled() {
+        ensureOneClickCubeLoaded();
+        return oneClickCubeDupMajorAllEnabled;
+    }
+
+    public void setOneClickCubeDupMajorAllEnabled(final boolean enabled) {
+        ensureOneClickCubeLoaded();
+        oneClickCubeDupMajorAllEnabled = enabled;
+
+        java.sql.Connection con = null;
+        java.sql.PreparedStatement ps = null;
+        try {
+            con = database.DatabaseConnection.getConnection();
+            ps = con.prepareStatement(
+                    "INSERT INTO oneclickcube_pref (characterid, prefkey, value) VALUES (?, 7, ?) "
                     + "ON DUPLICATE KEY UPDATE value = VALUES(value)"
             );
             ps.setInt(1, this.id);

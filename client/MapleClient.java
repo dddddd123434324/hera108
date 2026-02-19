@@ -2518,7 +2518,7 @@ public class MapleClient implements Runnable {
             for (ChannelServer ch : ChannelServer.getAllInstances()) {
                 for (MapleCharacter chr : ch.getPlayerStorage().getAllCharacters()) {
                     chr.dropMessage(-1, "현재 메소 배율: " + RateManager.MESO);
-                    chr.dropMessage(-1, "현재 드롭 배율: " + RateManager.DROP);
+                    chr.dropMessage(-1, "현재 드롭 배율: " + RateManager.getTrueDropRate());
                     chr.dropMessage(-1, "현재 추가 경험치 배율: " + RateManager.BURNING);
                     chr.dropMessage(-1, "버닝이 종료 되었습니다.");
                 }
@@ -2539,7 +2539,7 @@ public class MapleClient implements Runnable {
             for (ChannelServer ch : ChannelServer.getAllInstances()) {
                 for (MapleCharacter chr : ch.getPlayerStorage().getAllCharacters()) {
                     chr.dropMessage(-1, "현재 메소 배율: " + RateManager.MESO);
-                    chr.dropMessage(-1, "현재 드롭 배율: " + RateManager.DROP);
+                    chr.dropMessage(-1, "현재 드롭 배율: " + RateManager.getTrueDropRate());
                     chr.dropMessage(-1, "현재 추가 경험치 배율: " + RateManager.BURNING);
                     chr.dropMessage(-1, "버닝이 시작 되었습니다.");
                 }
@@ -2557,7 +2557,7 @@ public class MapleClient implements Runnable {
                     for (ChannelServer ch : ChannelServer.getAllInstances()) {
                         for (MapleCharacter chr : ch.getPlayerStorage().getAllCharacters()) {
                             chr.dropMessage(-1, "현재 메소 배율: " + RateManager.MESO);
-                            chr.dropMessage(-1, "현재 드롭 배율: " + RateManager.DROP);
+                            chr.dropMessage(-1, "현재 드롭 배율: " + RateManager.getTrueDropRate());
                             chr.dropMessage(-1, "현재 추가 경험치 배율: " + RateManager.BURNING);
                             chr.dropMessage(-1, "버닝이 종료 되었습니다.");
                         }

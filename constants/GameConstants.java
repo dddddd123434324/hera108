@@ -3792,12 +3792,12 @@ public class GameConstants {
         ONECLICK_CUBE_OPTION_GROUPS.put(10045, new int[]{10045, 20045, 30045}); // HP%
         ONECLICK_CUBE_OPTION_GROUPS.put(10046, new int[]{10046, 20046, 30046}); // MP%
         ONECLICK_CUBE_OPTION_GROUPS.put(10048, new int[]{10048, 20048, 30048}); // AVOID%
-        ONECLICK_CUBE_OPTION_GROUPS.put(20070, new int[]{20070, 30070});       // DAMAGE%
-        ONECLICK_CUBE_OPTION_GROUPS.put(20051, new int[]{20051, 30051});       // ATT%
-        ONECLICK_CUBE_OPTION_GROUPS.put(20052, new int[]{20052, 30052});       // MATT%
+        ONECLICK_CUBE_OPTION_GROUPS.put(20070, new int[]{10070, 20070, 30070});       // DAMAGE%
+        ONECLICK_CUBE_OPTION_GROUPS.put(20051, new int[]{10011, 10051, 20051, 30051});       // ATT%
+        ONECLICK_CUBE_OPTION_GROUPS.put(20052, new int[]{10012, 10052, 20052, 30052});       // MATT%
         ONECLICK_CUBE_OPTION_GROUPS.put(10291, new int[]{10291, 20291, 30291}); // IED
         ONECLICK_CUBE_OPTION_GROUPS.put(30601, new int[]{30601, 30602});       // BOSS
-        ONECLICK_CUBE_OPTION_GROUPS.put(20055, new int[]{20055, 30055});       // CRIT
+        ONECLICK_CUBE_OPTION_GROUPS.put(20055, new int[]{10055, 20055, 30055});       // CRIT
         ONECLICK_CUBE_OPTION_GROUPS.put(31001, new int[]{31001});             // Haste
         ONECLICK_CUBE_OPTION_GROUPS.put(31002, new int[]{31002});             // Mystic Door
         ONECLICK_CUBE_OPTION_GROUPS.put(31003, new int[]{31003});             // Sharp Eyes

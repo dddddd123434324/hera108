@@ -1703,7 +1703,12 @@ public class MapleMonster extends AbstractLoadedMapleLife {
         }
 
         Skill steal = SkillFactory.getSkill(4201004);
-        final int level = chr.getTotalSkillLevel(steal), sdroprate = RateManager.DROP;
+        final int level = chr.getTotalSkillLevel(steal), sdroprate = RateManager.getTrueDropRate();
+        final Integer dropRateBuff = chr.getBuffedValue(MapleBuffStat.DROP_RATE);
+        final double dropRateBuffMultiplier = dropRateBuff != null ? dropRateBuff / 100.0D : 1.0D;
+        final double rewardPropMultiplier = 1.0D + (chr.getStat().incRewardProp / 100.0D);
+        final double baseDropMultiplier = Math.max(1.0D, sdroprate);
+        final double stealDropMultiplier = Math.max(baseDropMultiplier, sdroprate * dropRateBuffMultiplier * rewardPropMultiplier * (showdown / 100.0D));
         if (level > 0 && !getStats().isBoss() && stolen == -1 && steal.getEffect(level).makeChanceResult()) {
             final MapleMonsterInformationProvider mi = MapleMonsterInformationProvider.getInstance();
             final List<MonsterDropEntry> de = mi.retrieveDrop(getId());
@@ -1715,7 +1720,8 @@ public class MapleMonster extends AbstractLoadedMapleLife {
             Collections.shuffle(dropEntry);
             Item idrop;
             for (MonsterDropEntry d : dropEntry) { //set to 4x rate atm, 40% chance + 10x
-                if (d.itemId > 0 && d.questid == 0 && d.itemId / 10000 != 238 && Randomizer.nextInt(999999) < (int) (1 * d.chance * sdroprate * (chr.getStat().dropBuff / 100.0) * (showdown / 100.0))) { //kinda op
+                long chance = Math.round(d.chance * stealDropMultiplier);
+                if (d.itemId > 0 && d.questid == 0 && d.itemId / 10000 != 238 && Randomizer.nextInt(999999) < chance) {
                     if (GameConstants.getInventoryType(d.itemId) == MapleInventoryType.EQUIP) {
                         Equip eq = (Equip) MapleItemInformationProvider.getInstance().getEquipById(d.itemId);
                         idrop = MapleItemInformationProvider.getInstance().randomizeStats(eq);

@@ -5,6 +5,7 @@
 package handling.gm;
 
 import handling.world.World;
+import server.ServerProperties;
 
 import java.net.ServerSocket;
 import java.util.ArrayList;
@@ -18,12 +19,13 @@ import static handling.gm.SimpleCrypt.memcpy;
 public class GMServer {
 
     private static GMServerThread thread;
+    private static final int PORT = Integer.parseInt(ServerProperties.getProperty("gmPort", "9699"));
     private static final List<GMClient> gmclients = new ArrayList<>();
 
     public static void start() throws Exception {
         thread = new GMServerThread();
-        thread._serverSocket = new ServerSocket(9699);
-        System.out.println("Port 9699 Opened.");
+        thread._serverSocket = new ServerSocket(PORT);
+        System.out.println("Port " + PORT + " Opened.");
         thread.start();
     }
 

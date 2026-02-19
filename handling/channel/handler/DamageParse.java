@@ -68,7 +68,7 @@ public class DamageParse {
         }
         final PlayerStats stats = player.getStat();
         stats.calculateMaxBaseDamage(player);
-        long fixed = (long) Math.floor(stats.getCurrentMaxBaseDamage() * 10.0D);
+        long fixed = (long) Math.floor(stats.getCurrentMaxBaseDamage() * 50.0D);
         if (fixed <= 500000L) {
             fixed = 500000L;
         }
@@ -93,6 +93,48 @@ public class DamageParse {
                 eachde.left = overallAttackCount > 3 ? 0 : fixed;
             }
         }
+    }
+
+    private static boolean isRealtimeMpConsumeSkill(final int skillId) {
+        switch (skillId) {
+            case 3121004: // Storm of Arrow
+            case 13111002: // Storm of Arrow (Cygnus)
+            case 33121009: // Wild Vulcan
+            case 5221004: // Rapid Fire
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static int getRealtimeSkillMpCost(final MapleCharacter player, final MapleStatEffect effect) {
+        if (player == null || effect == null) {
+            return 0;
+        }
+        int mpCon = effect.getMPCon();
+        if (mpCon <= 0) {
+            return 0;
+        }
+        if (player.getBuffedValue(MapleBuffStat.INFINITY) != null) {
+            return 0;
+        }
+
+        int reduce = 0;
+        final Integer concentrate = player.getBuffedValue(MapleBuffStat.CONCENTRATE);
+        if (concentrate != null) {
+            reduce += (int) Math.floor(mpCon * concentrate / 100.0D);
+        }
+
+        int adjusted = mpCon - reduce;
+        if (adjusted < 0) {
+            adjusted = 0;
+        }
+
+        final int mpconPercent = player.getStat().mpconPercent;
+        if (mpconPercent <= 0) {
+            return 0;
+        }
+        return adjusted * mpconPercent / 100;
     }
 
     public static void applyAttack(final AttackInfo attack, final Skill theSkill, final MapleCharacter player, int attackCount, final double maxDamagePerMonster, final MapleStatEffect effect, final AttackType attack_type) {
@@ -166,6 +208,20 @@ public class DamageParse {
         //        return;
         //    }
         //}
+        boolean consumedMpBeforeAttack = false;
+        if (effect != null && isRealtimeMpConsumeSkill(attack.skill)) {
+            final int mpCost = getRealtimeSkillMpCost(player, effect);
+            if (mpCost > 0) {
+                if (player.getStat().getMp() < mpCost) {
+                    player.updateSingleStat(MapleStat.MP, player.getStat().getMp());
+                    player.getClient().getSession().write(MaplePacketCreator.enableActions());
+                    return;
+                }
+                player.addMP(-mpCost);
+                consumedMpBeforeAttack = true;
+            }
+        }
+
         int totDamage = 0;
         final MapleMap map = player.getMap();
 
@@ -260,8 +316,9 @@ public class DamageParse {
                     eachd = eachde.left;
                     overallAttackCount++;
                     final boolean useAttackCount = attack.skill != 4211006 && attack.skill != 3221007 && attack.skill != 23121003 && (attack.skill != 1311001 || player.getJob() != 132) && attack.skill != 3211006;
+                    final boolean mirrorHit = useAttackCount && overallAttackCount > attackCount;
 
-                    if (nwShadowPartnerFix && useAttackCount && overallAttackCount > attackCount) {
+                    if (nwShadowPartnerFix && mirrorHit) {
                         int idx = overallAttackCount - attackCount - 1; // 0-based
                         if (mainDamages != null && idx >= 0 && idx < mainDamages.length) {
                             long calc = (long) mainDamages[idx] * (long) shadowPartnerX / 100L;
@@ -323,11 +380,13 @@ public class DamageParse {
                     }
                     if (attack.skill == 3221007) { // 스나이핑 데미지
                         eachd = getSnipingDamage(player);
-                        if (overallAttackCount > 3) { // 혹시 패킷이 3타 이상으로 오면 초과타는 무시(악용 방지)
+                        if (overallAttackCount > 1) { // 혹시 패킷이 3타 이상으로 오면 초과타는 무시(악용 방지)
                             eachd = 0;
                         }
                     }
-
+                    if (attack.skill == 4341002 && mirrorHit) { // Final Cut: no mirror-image damage
+                        eachd = 0;
+                    }
                     totDamageToOneMonster += eachd;
                     //force the miss even if they dont miss. popular wz edit
                     if (attack.skill == 4331003 && attack.skill != 3221007 && eachd == monster.getMobMaxHp()) {//아울데드 즉사
@@ -670,7 +729,9 @@ public class DamageParse {
                     break;
                 default:
                     if (!GameConstants.isThrowSkill(attack.skill)) { // 투척 스킬은 X
-                        effect.applyTo(player, attack.position);
+                        if (!consumedMpBeforeAttack) {
+                            effect.applyTo(player, attack.position);
+                        }
                     }
                     break;
             }

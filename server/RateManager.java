@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright 2017 Jŭbar.
+ * Copyright 2017 J?펉ar.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,25 +42,26 @@ import java.util.concurrent.ScheduledFuture;
 public class RateManager {
 
     private static final String FILENAME = "eventschedule.db";
-    public static final int DISPLAY_DROP, DISPLAY_MESO; //표면상 드롭률
-    public static final int TRUEEXP0, EXP0, DROP0, MESO0, QEXP0, PEXP0;
-    public static int EXP, TRUEEXP, DROP, MESO, QEXP, PEXP, CASH = 1, TRAIT = 1, BURNING = 0;
+    public static final int DISPLAY_DROP, DISPLAY_MESO;
+    public static final int TRUEEXP0, EXP0, DROP0, TRUEDROP0, MESO0, QEXP0, PEXP0;
+    public static int EXP, TRUEEXP, DROP, TRUEDROP, MESO, QEXP, PEXP, CASH = 1, TRAIT = 1, BURNING = 0;
     public static final List<EventSchedule> SCHEDULES = new ArrayList<>(256);
     public static EventSchedule CURRENT_SCHEDULE = null;
 
     static {
         EXP = EXP0 = Integer.parseInt(ServerProperties.getProperty("exp"));
-        //TRUEEXP = TRUEEXP0 = Integer.parseInt(ServerProperties.getProperty("exp"));
+        //TRUEEXP = TRUEEXP0 = Integer.parseInt(ServerProperties.getProperty("trueexp", "1"));
         TRUEEXP = TRUEEXP0 = 1;
         QEXP = QEXP0 = Integer.parseInt(ServerProperties.getProperty("qexp"));
         PEXP = PEXP0 = Integer.parseInt(ServerProperties.getProperty("pexp"));
-        DROP = DROP0 = Integer.parseInt(ServerProperties.getProperty("drop"));
+        DROP = DROP0 = Integer.parseInt(ServerProperties.getProperty("drop", "1"));
+        TRUEDROP = TRUEDROP0 = Integer.parseInt(ServerProperties.getProperty("truedrop", "1"));
         MESO = MESO0 = Integer.parseInt(ServerProperties.getProperty("meso"));
         DISPLAY_DROP = Integer.parseInt(ServerProperties.getProperty("fakedrop"));
         DISPLAY_MESO = Integer.parseInt(ServerProperties.getProperty("fakemeso"));
     }
 
-    public static int getTrueExpByLevel(final int level) { // 경험치 배율 수정
+    public static int getTrueExpByLevel(final int level) { // 寃쏀뿕移?諛곗쑉 ?섏젙
         final int tier;
         if (level >= 221) {
             tier = 1;
@@ -77,7 +78,11 @@ public class RateManager {
         } else {
             tier = 10;
         }
-        return tier * TRUEEXP;
+        return tier * EXP * TRUEEXP;
+    }
+
+    public static int getTrueDropRate() {
+        return (int) Math.min((long) DROP * TRUEDROP, Integer.MAX_VALUE);
     }
 
     public static synchronized void load() {
@@ -209,16 +214,13 @@ public class RateManager {
                 state = 0;
                 sleepTill(start);
 
-                //
                 state = 1;
                 set(this);
                 sleepTill(end);
 
-                //
                 state = 2;
                 reset();
             } catch (InterruptedException ex) {
-
             }
         }
 

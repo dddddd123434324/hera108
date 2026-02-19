@@ -919,6 +919,11 @@ public class MapleItemInformationProvider {
                                     nEquip.setOwner("");
                                 }
                             } else {
+                                final boolean blockProtectShield = nEquip.getEnhance() >= 13
+                                        && (scrollId.getItemId() == 2049300 || scrollId.getItemId() == 2049301);
+                                if (blockProtectShield) {
+                                    return null;
+                                }
 
                                 if (nEquip.getOwner() == "프로텍트 실드") {
                                     nEquip.setOwner("");
@@ -1420,7 +1425,7 @@ public class MapleItemInformationProvider {
         MapleData itemsData;
         itemsData = stringData.getData("Eqp.img").getChildByPath("Eqp").getChildByPath("Face");
         for (MapleData itemFolder : itemsData.getChildren()) {
-            itemPairs.add(new Pair<Integer, String>(Integer.parseInt(itemFolder.getName()), MapleDataTool.getString("name", itemFolder, "NO-NAME")));
+            itemPairs.add(new Pair<Integer, String>(Integer.parseInt(itemFolder.getName()), MapleDataTool.getString("name", itemFolder, "(null)")));
         }
         return itemPairs;
     }
@@ -1430,7 +1435,7 @@ public class MapleItemInformationProvider {
         MapleData itemsData;
         itemsData = stringData.getData("Eqp.img").getChildByPath("Eqp").getChildByPath("Hair");
         for (MapleData itemFolder : itemsData.getChildren()) {
-            itemPairs.add(new Pair<Integer, String>(Integer.parseInt(itemFolder.getName()), MapleDataTool.getString("name", itemFolder, "NO-NAME")));
+            itemPairs.add(new Pair<Integer, String>(Integer.parseInt(itemFolder.getName()), MapleDataTool.getString("name", itemFolder, "(null)")));
         }
         return itemPairs;
     }

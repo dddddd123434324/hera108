@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright 2017 Jŭbar.
+ * Copyright 2017 J?펉ar.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,11 +41,11 @@ public class GMPacket {
     public static byte[] initialInformation() {
         MaplePacketLittleEndianWriter mplew = new MaplePacketLittleEndianWriter();
         mplew.write(1);
-        mplew.writeInt(RateManager.EXP); //경험치
-        mplew.writeInt(RateManager.DROP); //드롭
-        mplew.writeInt(RateManager.MESO); //메소
-        mplew.writeInt(World.Find.size()); //게임 접속자
-        mplew.writeInt(GMServer.size()); //GMC 접속자
+        mplew.writeInt(RateManager.EXP);
+        mplew.writeInt(RateManager.getTrueDropRate());
+        mplew.writeInt(RateManager.MESO); // 硫붿냼
+        mplew.writeInt(World.Find.size());
+        mplew.writeInt(GMServer.size());
         return mplew.getPacket();
     }
 

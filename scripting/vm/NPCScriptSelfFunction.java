@@ -470,7 +470,7 @@ public class NPCScriptSelfFunction {
                             namez = "";
                         }
                     }
-                    int chance = de.chance * RateManager.DROP;
+                    int chance = de.chance * RateManager.getTrueDropRate();
 
                     if (!MapleItemInformationProvider.getInstance().itemExists(itemId)) {
                         sb.append("wz에 존재하지 않는 아이템 : " + itemId + "\r\n");

@@ -65,31 +65,7 @@ public class PlayerCommand {
             return 1;
         }
     }
-
-    public static class 아이템드랍검색 extends 아이템드롭검색 {
-    }
-
-    public static class 아이템드롭검색 extends CommandExecute {
-
-        public int execute(MapleClient c, String[] splitted) {
-            NPCScriptManager.getInstance().start(c, 9000003);
-
-            return 1;
-        }
-    }
-
-    public static class 몬스터드랍검색 extends 몬스터드롭검색 {
-    }
-
-    public static class 몬스터드롭검색 extends CommandExecute {
-
-        public int execute(MapleClient c, String[] splitted) {
-            NPCScriptInvoker.runNpc(c, 9900001, 0);
-
-            return 1;
-        }
-    }
-
+    
     public static class 큐브교환 extends CommandExecute {
 
         @Override
@@ -320,58 +296,11 @@ public class PlayerCommand {
         }
     }
 
-    public static class 드랍 extends PlayerCommand.드롭검색 {
-    }
-
-    public static class 아이템검색 extends PlayerCommand.드롭검색 {
-    }
-
-    public static class 드롭 extends PlayerCommand.드롭검색 {
-    }
-
-    public static class 드롭검색 extends CommandExecute {
-
-        @Override
-        public int execute(MapleClient c, String[] splitted) {
-            //c.getPlayer().searchMob(splitted[1]);
-            NPCScriptManager.getInstance().start(c, 9000019, "9000019");
-            //NPCScriptInvoker.runNpc(c, 9000019, 0);
-            return 1;
-        }
-    }
-
-    public static class 피부 extends CommandExecute {
-
-        @Override
-        public int execute(MapleClient c, String[] splitted) {
-            NPCScriptManager.getInstance().start(c, 9000004);
-            return 0;
-        }
-    }
-
-    public static class 헤어검색 extends CommandExecute {
-
-        @Override
-        public int execute(MapleClient c, String[] splitted) {
-            NPCScriptManager.getInstance().start(c, 9000006);
-            return 0;
-        }
-    }
-
     public static class 자석 extends CommandExecute {
 
         @Override
         public int execute(MapleClient c, String[] splitted) {
             NPCScriptManager.getInstance().start(c, 9900000);
-            return 0;
-        }
-    }
-
-    public static class 코디검색 extends CommandExecute {
-
-        @Override
-        public int execute(MapleClient c, String[] splitted) {
-            NPCScriptManager.getInstance().start(c, 9000005);
             return 0;
         }
     }
@@ -384,8 +313,29 @@ public class PlayerCommand {
             return 0;
         }
     }
+    
+    public static class 코디 extends CommandExecute {
 
-    public static class 이동기 extends CommandExecute {
+        @Override
+        public int execute(MapleClient c, String[] splitted) {
+            NPCScriptManager.getInstance().start(c, 1012117);
+            return 0;
+        }
+    }
+
+    public static class 드롭검색 extends PlayerCommand.드랍검색 {
+    }
+    
+    public static class 드랍검색 extends CommandExecute {
+
+        @Override
+        public int execute(MapleClient c, String[] splitted) {
+            NPCScriptManager.getInstance().start(c, 9000019);
+            return 0;
+        }
+    }
+    
+    public static class 히든스킬 extends CommandExecute {
 
         @Override
         public int execute(MapleClient c, String[] splitted) {
@@ -415,14 +365,15 @@ public class PlayerCommand {
             player.dropMessage(6, "@동접, 동접확인 : 현재 동시 접속자 수 확인.");
             player.dropMessage(6, "@드롭, 드롭검색, 아이템검색 : 드롭데이터 정보센터.");
             player.dropMessage(6, "@힘, 덱, 인, 럭 <숫자> : 숫자만큼 AP를 소비하여 스텟을 올립니다.");
-            player.dropMessage(6, "@헤어검색, @코디검색, @피부, @몬스터드롭검색, @아이템드롭검색");
+            player.dropMessage(6, "@코디 : 코디를 설정합니다.");
+            player.dropMessage(6, "@드롭검색 or @드랍검색");
             player.dropMessage(6, "@주사위 : 굴리기, @자석 : 자석 기능 설정, @스킬검색 : 스킬 정보 확인");
             player.dropMessage(6, "@캐시버리기 : 의류수거함을 불러올 수 있습니다.");
             player.dropMessage(6, "@큐브교환 : 큐브를 교환해 주는 NPC를 불러옵니다.");
             player.dropMessage(6, "@마북 : 마스터리 북을 거래하는 NPC를 불러옵니다.");
             player.dropMessage(6, "@일괄판매, @일괄판매2 : 장비 아이템을 일괄 판매할 수 있습니다.");
             player.dropMessage(6, "@큐브옵션 : 희망 큐브 옵션을 설정하는 NPC를 불러옵니다.");
-            player.dropMessage(6, "@이동기 : 100 레벨 이상의 캐릭터에 플래시 점프 또는 텔레포트를 익힐 수 있습니다. (도적 사용 불가)");
+            player.dropMessage(6, "@히든스킬 : 조건을 만족하는 스킬을 따로 습득할 수 있습니다.");
             return 1;
         }
     }

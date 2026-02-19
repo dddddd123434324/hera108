@@ -210,7 +210,7 @@ public class LoginPacket {
         final String worldName = LoginServer.getTrueServerName(); //remove the SEA
         mplew.writeMapleAsciiString(worldName);
             mplew.write(LoginServer.getFlag());
-        mplew.writeMapleAsciiString(LoginServer.getEventMessage()+"\r\n#b현재 접속중인 인원: "+World.getConnected().get(0));
+        mplew.writeMapleAsciiString(LoginServer.getEventMessage());
         mplew.writeShort(100);
         mplew.writeShort(100);
         int lastChannel = 1;
